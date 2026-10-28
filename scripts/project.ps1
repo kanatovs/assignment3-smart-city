@@ -33,25 +33,30 @@ if ($compilerVersion -notmatch '^javac (\d+)' -or [int]$Matches[1] -lt 17) {
 
 $sourceDirectory = Join-Path $projectRoot 'src/main/java'
 $classesDirectory = [System.IO.Path]::GetFullPath((Join-Path $projectRoot 'build/classes'))
+$testSourceDirectory = Join-Path $projectRoot 'src/test/java'
+$testClassesDirectory = [System.IO.Path]::GetFullPath((Join-Path $projectRoot 'build/test-classes'))
 $sourceFiles = @(Get-ChildItem -LiteralPath $sourceDirectory -Recurse -Filter '*.java' |
     Sort-Object FullName | Select-Object -ExpandProperty FullName)
 if ($sourceFiles.Count -eq 0) {
     throw 'No Java source files were found.'
 }
 
-if (Test-Path -LiteralPath $classesDirectory) {
-    $resolvedClassesDirectory = (Resolve-Path -LiteralPath $classesDirectory).ProviderPath
+foreach ($outputDirectory in @($classesDirectory, $testClassesDirectory)) {
+    if (-not (Test-Path -LiteralPath $outputDirectory)) {
+        continue
+    }
+    $resolvedOutputDirectory = (Resolve-Path -LiteralPath $outputDirectory).ProviderPath
     $expectedPrefix = [System.IO.Path]::GetFullPath($projectRoot) + [System.IO.Path]::DirectorySeparatorChar
-    if (-not $resolvedClassesDirectory.StartsWith($expectedPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+    if (-not $resolvedOutputDirectory.StartsWith($expectedPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
         throw 'The generated classes directory must be inside the project.'
     }
-    $outputDirectories = @((Get-Item -LiteralPath (Split-Path -Parent $classesDirectory)),
-        (Get-Item -LiteralPath $classesDirectory))
-    $outputDirectories += @(Get-ChildItem -LiteralPath $classesDirectory -Recurse -Force -Directory)
+    $outputDirectories = @((Get-Item -LiteralPath (Split-Path -Parent $outputDirectory)),
+        (Get-Item -LiteralPath $outputDirectory))
+    $outputDirectories += @(Get-ChildItem -LiteralPath $outputDirectory -Recurse -Force -Directory)
     if ($outputDirectories | Where-Object { $_.Attributes -band [System.IO.FileAttributes]::ReparsePoint }) {
         throw 'The generated classes directory must not contain directory links.'
     }
-    Remove-Item -LiteralPath $resolvedClassesDirectory -Recurse -Force
+    Remove-Item -LiteralPath $resolvedOutputDirectory -Recurse -Force
 }
 New-Item -ItemType Directory -Path $classesDirectory -Force | Out-Null
 & $javac --release 17 -encoding UTF-8 -Xlint:all -Werror -d $classesDirectory @sourceFiles
@@ -75,5 +80,31 @@ if (@($output).Count -ne 1 -or $output -ne 'Smart City Infrastructure and Route 
     throw 'The startup smoke check returned unexpected output.'
 }
 
+$testSourceFiles = @(Get-ChildItem -LiteralPath $testSourceDirectory -Recurse -Filter '*.java' |
+    Sort-Object FullName)
+$testEntryPoints = @($testSourceFiles | Where-Object { $_.Name -like '*Test.java' })
+if ($testEntryPoints.Count -eq 0) {
+    throw 'No executable test classes were found under src/test/java.'
+}
+
+New-Item -ItemType Directory -Path $testClassesDirectory -Force | Out-Null
+$testSourcePaths = @($testSourceFiles | Select-Object -ExpandProperty FullName)
+& $javac --release 17 -encoding UTF-8 -Xlint:all -Werror -cp $classesDirectory -d $testClassesDirectory @testSourcePaths
+if ($LASTEXITCODE -ne 0) {
+    throw 'Java test compilation failed.'
+}
+
+$testClassPath = $classesDirectory + [System.IO.Path]::PathSeparator + $testClassesDirectory
+$testRootPrefix = [System.IO.Path]::GetFullPath($testSourceDirectory) + [System.IO.Path]::DirectorySeparatorChar
+foreach ($testEntryPoint in $testEntryPoints) {
+    $relativePath = $testEntryPoint.FullName.Substring($testRootPrefix.Length)
+    $testClass = $relativePath.Substring(0, $relativePath.Length - '.java'.Length) -replace '[\\/]', '.'
+    & $java -cp $testClassPath $testClass
+    if ($LASTEXITCODE -ne 0) {
+        throw "Test class failed: $testClass"
+    }
+}
+
 Write-Output "Build passed with $compilerVersion (target: Java 17, warnings treated as errors)."
 Write-Output 'Startup smoke check passed.'
+Write-Output "$($testEntryPoints.Count) test class(es) passed."
