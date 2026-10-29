@@ -6,9 +6,10 @@ and shortest routes.
 
 ## Project status
 
-The project includes a weighted graph model, graph tests, and build commands.
-The console entry point currently prints the project title. Graph algorithms
-and experiments have not been implemented yet.
+The project includes a weighted graph model, a disjoint set union structure,
+graph and DSU tests, and build commands. The console entry point currently
+prints the project title. MST, connectivity, and shortest-path algorithms and
+experiments have not been implemented yet.
 
 ## Build and run
 
@@ -61,6 +62,7 @@ find src/test/java -name '*.java' | sort > build/test-sources.txt
 javac --release 17 -encoding UTF-8 -Xlint:all -Werror \
   -cp build/classes -d build/test-classes @build/test-sources.txt
 java -cp build/classes:build/test-classes cityplanner.graph.WeightedGraphTest
+java -cp build/classes:build/test-classes cityplanner.dsu.DisjointSetUnionTest
 java -cp build/classes cityplanner.Main
 ```
 
@@ -88,7 +90,9 @@ Current source layout:
 src/main/java/cityplanner/Main.java                   Console entry point
 src/main/java/cityplanner/graph/Edge.java             Immutable edge value
 src/main/java/cityplanner/graph/WeightedGraph.java    Adjacency-list graph
+src/main/java/cityplanner/dsu/DisjointSetUnion.java   Groups with union and find
 src/test/java/cityplanner/graph/WeightedGraphTest.java Graph correctness checks
+src/test/java/cityplanner/dsu/DisjointSetUnionTest.java DSU correctness checks
 scripts/project.ps1                                 Build, test, and run commands
 ```
 
@@ -127,6 +131,39 @@ graph.addEdge(1, 2, 4);
 
 `edgesFrom(1)` contains `(1, 0, 7)` and `(1, 2, 4)`, while `edgesFrom(3)` is empty.
 
+### Disjoint Set Union
+
+`DisjointSetUnion(elementCount)` starts with one group per element, numbered
+from `0` to `elementCount - 1`. Zero elements are allowed; a negative count is
+rejected. The structure stores a parent and a group size in two integer arrays.
+
+`find(element)` returns the root representing its group. It first follows parent
+links to the root, then makes every element on that path point directly to the
+root. This path compression shortens later searches. Both passes are iterative.
+
+`union(first, second)` finds both roots and attaches the smaller group below
+the larger group. This union-by-size rule prevents long chains. A successful
+merge returns `true` and reduces `componentCount()` by one. If both elements
+already share a group, it returns `false` and leaves the group count unchanged.
+Root IDs are implementation details and can change after a merge.
+
+Both arguments are validated before a union changes any parents or counters.
+Invalid element IDs cause `IllegalArgumentException`. The arrays are private;
+callers change group membership through `union`. Even `find` can change parents
+through compression, so this structure is intended for single-threaded use.
+
+The structure records these counters for later performance measurements:
+
+| Counter | Meaning |
+| --- | --- |
+| `findCalls()` | Valid `find` calls, including the two searches inside each valid `union` |
+| `unionCalls()` | Valid merge attempts, including attempts on an already connected pair |
+| `parentTraversals()` | Parent links followed in both the root search and compression pass |
+
+A search starting `h` links below its root counts `2h` parent traversals.
+A root search counts zero traversals. Invalid calls do not change the counters.
+Construction does not count as a search or merge; counters start at zero.
+
 ## Complexity Analysis
 
 The graph representation requires `O(V + E)` storage. Each undirected non-loop
@@ -141,8 +178,19 @@ edge contributes two adjacency entries, which does not change this bound.
 | Iterate all logical edges | `O(E)` |
 | Iterate outgoing edges from a vertex | `O(outgoing adjacency entries)` |
 
-Graph algorithms have not been implemented yet, so their complexity analysis
-is not available.
+DSU initialization takes `O(V)` time and its arrays require `O(V)` space.
+`find` and `union` take amortized `O(alpha(V))` time with path compression and
+union by size, where `alpha` is the inverse Ackermann function and grows very
+slowly. This is an amortized bound over a sequence, not a constant-time guarantee
+for each call. A single search can still take `O(log V)` time. Counts and counter
+getters take `O(1)` time.
+
+Union by size limits tree depth by attaching a smaller group below a larger
+one. Path compression then reduces the depth of visited elements. The iterative
+implementation uses `O(1)` extra space for a search or merge.
+
+MST, connectivity, and shortest-path algorithms have not been implemented yet,
+so their complexity analysis is not available.
 
 ## Experimental Setup
 
@@ -178,7 +226,14 @@ mutation through returned views, and verifies that live views reflect additions.
 Checks throw `AssertionError` on failure and do not depend on Java's optional
 `assert` flag. The PowerShell `check` command compiles all test sources into
 `build/test-classes`, runs each test entry point, and also checks console startup.
-There are no algorithm tests yet.
+
+`DisjointSetUnionTest` contains 11 scenarios covering initial groups, empty and
+single-element inputs, successful and repeated unions, invalid indices, union
+by size, path compression, and exact operation counter values. It also compares
+900 generated operations across three fixed seeds with an independent reference
+model that stores a group label for each element, then checks the complete final
+partition. Invalid union arguments are checked before any compression or counter
+change can occur.
 
 Required cases include small and disconnected graphs, cycles, multiple valid
 MSTs, unreachable vertices, repeated edge weights, and a single vertex.
