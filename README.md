@@ -7,9 +7,10 @@ and shortest routes.
 ## Project status
 
 The project includes a weighted graph model, a disjoint set union structure,
-graph and DSU tests, and build commands. The console entry point currently
-prints the project title. MST, connectivity, and shortest-path algorithms and
-experiments have not been implemented yet.
+Kruskal's minimum spanning forest algorithm, correctness tests, and build
+commands. The console entry point currently prints the project title.
+Prim, directed connectivity, shortest paths, and experiments have not been
+implemented yet.
 
 ## Build and run
 
@@ -63,6 +64,7 @@ javac --release 17 -encoding UTF-8 -Xlint:all -Werror \
   -cp build/classes -d build/test-classes @build/test-sources.txt
 java -cp build/classes:build/test-classes cityplanner.graph.WeightedGraphTest
 java -cp build/classes:build/test-classes cityplanner.dsu.DisjointSetUnionTest
+java -cp build/classes:build/test-classes cityplanner.mst.KruskalTest
 java -cp build/classes cityplanner.Main
 ```
 
@@ -84,16 +86,33 @@ experiments will use non-negative edge weights.
 
 ## Implementation
 
-Current source layout:
+Current project layout:
 
 ```text
-src/main/java/cityplanner/Main.java                   Console entry point
-src/main/java/cityplanner/graph/Edge.java             Immutable edge value
-src/main/java/cityplanner/graph/WeightedGraph.java    Adjacency-list graph
-src/main/java/cityplanner/dsu/DisjointSetUnion.java   Groups with union and find
-src/test/java/cityplanner/graph/WeightedGraphTest.java Graph correctness checks
-src/test/java/cityplanner/dsu/DisjointSetUnionTest.java DSU correctness checks
-scripts/project.ps1                                 Build, test, and run commands
+.
+|-- .gitattributes
+|-- .gitignore
+|-- README.md
+|-- scripts/
+|   `-- project.ps1
+`-- src/
+    |-- main/java/cityplanner/
+    |   |-- Main.java
+    |   |-- graph/
+    |   |   |-- Edge.java
+    |   |   `-- WeightedGraph.java
+    |   |-- dsu/
+    |   |   `-- DisjointSetUnion.java
+    |   `-- mst/
+    |       |-- Kruskal.java
+    |       `-- MstResult.java
+    `-- test/java/cityplanner/
+        |-- graph/
+        |   `-- WeightedGraphTest.java
+        |-- dsu/
+        |   `-- DisjointSetUnionTest.java
+        `-- mst/
+            `-- KruskalTest.java
 ```
 
 `Main` prints the project title. The PowerShell script compiles the source files
@@ -164,6 +183,47 @@ A search starting `h` links below its root counts `2h` parent traversals.
 A root search counts zero traversals. Invalid calls do not change the counters.
 Construction does not count as a search or merge; counters start at zero.
 
+### Kruskal
+
+`Kruskal.findMinimumSpanningForest(graph)` accepts an undirected weighted graph.
+It copies the logical edge list, sorts the copy by ascending weight, and uses
+a fresh DSU to decide whether an edge joins two different groups. An edge is
+selected only when `union` succeeds, so self-loops and cycle-forming edges are
+skipped. Processing stops when a single component remains; disconnected inputs
+require examining every edge. Sorting still covers all input edges.
+
+Sorting uses `Integer.compare` rather than subtracting weights, which avoids
+overflow when comparing extreme integer values. Equal-weight edges retain
+their insertion order. The original graph and its edge order are unchanged.
+
+`MstResult` contains the selected edges, a `long` total weight, and the remaining
+component count. Its edge list is a defensive read-only copy. A result is
+connected when it has exactly one component. For connected input this is an
+MST; for disconnected input it is a minimum spanning forest covering every
+component, including isolated vertices. The result contains `V - componentCount`
+edges. Zero and negative weights and parallel edges are supported.
+
+A single-vertex graph has a connected result with no edges and weight zero.
+An empty graph has no edges, weight zero, and zero components; this project
+reports it as not connected. Directed input is rejected with
+`IllegalArgumentException`; null input is rejected with `NullPointerException`.
+
+For the four-vertex example above, the result contains the two existing edges
+with total weight 11 and two components. It is a forest rather than an MST.
+
+| Counter on `Kruskal` | Meaning |
+| --- | --- |
+| `sortingComparisons()` | Comparator calls while sorting the complete edge copy |
+| `edgeExaminations()` | Edges visited after sorting, before early termination |
+| `findCalls()` | DSU root searches, including those inside unions |
+| `unionCalls()` | DSU merge attempts; one per examined edge |
+| `parentTraversals()` | DSU parent links followed in both search passes |
+
+Counters reset for each valid call and describe its execution. Each examined
+edge causes one union attempt and two finds. Read counters before reusing the
+same instance for another graph. Invalid input is rejected before counters
+are reset. The algorithm instance is intended for single-threaded use.
+
 ## Complexity Analysis
 
 The graph representation requires `O(V + E)` storage. Each undirected non-loop
@@ -189,8 +249,16 @@ Union by size limits tree depth by attaching a smaller group below a larger
 one. Path compression then reduces the depth of visited elements. The iterative
 implementation uses `O(1)` extra space for a search or merge.
 
-MST, connectivity, and shortest-path algorithms have not been implemented yet,
-so their complexity analysis is not available.
+Kruskal copies and sorts `E` logical edges, initializes a DSU for `V` vertices,
+and makes at most `E` union attempts. Its worst-case time is
+`O(V + E log(E + 1) + E alpha(V))`, including initialization and the result
+copy. Sorting contributes the usual `O(E log E)` term for `E >= 2`. The explicit
+`V` term matters for sparse or disconnected graphs with many isolated vertices.
+Extra space is `O(V + E)` for the DSU, edge copy, sorting storage, and result.
+Early termination reduces edge processing but does not skip copying or sorting.
+
+Prim, directed connectivity, and shortest-path algorithms have not been
+implemented yet, so their complexity analysis is not available.
 
 ## Experimental Setup
 
@@ -201,6 +269,10 @@ runs per case, timed with `System.nanoTime()`.
 Graph generation, warm-up, and console output will stay outside the timed
 algorithm call. Generation policies, operation counter definitions, timer
 boundaries, JDK version, and machine details will be recorded with the results.
+
+Kruskal's complete method is the timing boundary: copying and sorting edges,
+DSU initialization, edge selection, counter updates, and the immutable result
+copy are included. Input generation and console/file output remain outside.
 
 ## Results
 
@@ -234,6 +306,20 @@ by size, path compression, and exact operation counter values. It also compares
 model that stores a group label for each element, then checks the complete final
 partition. Invalid union arguments are checked before any compression or counter
 change can occur.
+
+`KruskalTest` contains 14 scenarios checking known minimum weights and forest
+validity: selected edges must come from the input, contain no cycles, and
+preserve all original connected components. Cases include disconnected graphs, isolated
+vertices, empty and single-vertex inputs, cycles, self-loops, parallel edges,
+repeated weights, negative weights, and integer weight limits. Multiple valid
+MSTs are checked by cost and structure rather than an exact edge list.
+Additional checks cover counters, early termination, repeated invocations,
+input preservation, result immutability, and invalid directed/null input.
+An independent exhaustive search checks minimum cost on 144 small graphs:
+all 64 simple undirected topologies on four vertices and 80 multigraph cases
+generated with seed `41004`. The oracle enumerates edge subsets and uses
+component labels instead of the production DSU. It is limited to at most eight
+edges per graph and is only used in tests.
 
 Required cases include small and disconnected graphs, cycles, multiple valid
 MSTs, unreachable vertices, repeated edge weights, and a single vertex.
