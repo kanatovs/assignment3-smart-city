@@ -8,9 +8,10 @@ and shortest routes.
 
 The project includes a weighted graph model, a disjoint set union structure,
 Kruskal and Prim minimum spanning forest algorithms, topological sorting with
-cycle detection, strongly connected components, correctness tests, and build
-commands. The console entry point currently prints the project title.
-Shortest paths and experiments have not been implemented yet.
+cycle detection, strongly connected components, and Dijkstra shortest paths
+with route reconstruction. Correctness tests and build commands are included.
+The console entry point currently prints the project title; console examples
+and experiments have not been implemented yet.
 
 ## Build and run
 
@@ -68,6 +69,7 @@ java -cp build/classes:build/test-classes cityplanner.mst.KruskalTest
 java -cp build/classes:build/test-classes cityplanner.mst.PrimTest
 java -cp build/classes:build/test-classes cityplanner.connectivity.TopologicalSortTest
 java -cp build/classes:build/test-classes cityplanner.connectivity.KosarajuTest
+java -cp build/classes:build/test-classes cityplanner.shortestpath.DijkstraTest
 java -cp build/classes cityplanner.Main
 ```
 
@@ -110,11 +112,14 @@ Current project layout:
     |   |   |-- Kruskal.java
     |   |   |-- MstResult.java
     |   |   `-- Prim.java
-    |   `-- connectivity/
-    |       |-- Kosaraju.java
-    |       |-- SccResult.java
-    |       |-- TopologicalSort.java
-    |       `-- TopologicalSortResult.java
+    |   |-- connectivity/
+    |   |   |-- Kosaraju.java
+    |   |   |-- SccResult.java
+    |   |   |-- TopologicalSort.java
+    |   |   `-- TopologicalSortResult.java
+    |   `-- shortestpath/
+    |       |-- Dijkstra.java
+    |       `-- DijkstraResult.java
     `-- test/java/cityplanner/
         |-- graph/
         |   `-- WeightedGraphTest.java
@@ -123,9 +128,11 @@ Current project layout:
         |-- mst/
         |   |-- KruskalTest.java
         |   `-- PrimTest.java
-        `-- connectivity/
-            |-- KosarajuTest.java
-            `-- TopologicalSortTest.java
+        |-- connectivity/
+        |   |-- KosarajuTest.java
+        |   `-- TopologicalSortTest.java
+        `-- shortestpath/
+            `-- DijkstraTest.java
 ```
 
 `Main` prints the project title. The PowerShell script compiles the source files
@@ -371,6 +378,66 @@ the total is `3E` for every valid run. Vertex loops, stack operations, allocatio
 and result copying are outside these counters. Invalid calls preserve previous
 values; read counters before reusing the instance.
 
+### Dijkstra
+
+`Dijkstra.findShortestPaths(graph, source)` finds shortest distances from a
+valid source in either a directed or undirected graph. Before changing counters
+or creating traversal state, it validates the source and scans all logical
+edges for negative weights, including edges in unreachable components.
+Negative weights and invalid sources cause `IllegalArgumentException`; null
+input causes `NullPointerException`. An empty graph has no valid source.
+
+Distances begin at `DijkstraResult.UNREACHABLE` (`Long.MAX_VALUE`), except the
+source distance of zero. A `PriorityQueue` holds vertex-distance entries,
+ordered with `Long.compare`. For each current entry, outgoing edges are relaxed:
+if an edge gives a strictly smaller distance, the distance and predecessor
+are updated and a new queue entry is added. A polled entry whose distance no
+longer matches the best known distance is obsolete and skipped before scanning
+adjacency. Each reachable vertex's outgoing list is therefore scanned once.
+
+Non-negative weights ensure that a current minimum-distance entry cannot later
+receive a shorter route. Negative weights would invalidate that reasoning.
+Self-loops, parallel edges, zero weights, and zero-weight cycles are supported.
+Equal-distance alternatives do not replace predecessors or add queue entries,
+so ties do not create predecessor cycles. Different optimal paths may exist;
+the API does not promise one particular path when distances tie.
+
+All distances and additions use `long`, and `Math.addExact` prevents silent
+overflow. With this model's integer vertex count and non-negative integer
+weights, a shortest simple path costs at most `(V - 1) * Integer.MAX_VALUE`.
+Even extending that distance by one edge fits in `long`, so the unreachable
+sentinel is distinct from every finite distance the graph can produce.
+
+`DijkstraResult` stores private copies of the distances and predecessors; its
+constructor is package-private. `source()` and `vertexCount()` identify the
+result, `distanceTo(vertex)` returns a distance or the unreachable sentinel,
+and `isReachable(vertex)` distinguishes the two. `pathTo(vertex)` follows
+predecessors iteratively and reverses the sequence into an immutable list of
+vertex IDs. The source path is `[source]`; an unreachable target has an empty
+path. Invalid target IDs cause `IllegalArgumentException`. The input graph and
+earlier results remain unchanged by later graph edits or algorithm calls.
+
+| Counter on `Dijkstra` | Meaning |
+| --- | --- |
+| `validationEdgeExaminations()` | Logical edges checked for negative weights; `E` for valid input |
+| `processingEdgeExaminations()` | Outgoing adjacency entries scanned from reachable vertices |
+| `edgeExaminations()` | Sum of validation and processing edge scans |
+| `relaxationAttempts()` | One attempt per processing edge scan; the same count as `processingEdgeExaminations()` |
+| `successfulRelaxations()` | Strict distance improvements |
+| `queueOffers()` | Initial source entry plus one entry per successful relaxation |
+| `queuePolls()` | Entries removed, including obsolete entries |
+| `queueComparisons()` | Distance comparator calls during heap operations |
+
+For `R` outgoing adjacency entries from reachable vertices, processing performs
+`R` scans and relaxation attempts; total edge examinations are `E + R`.
+Directed adjacency contains one entry per edge; undirected non-loop edges have
+two entries. Unreachable vertices do not enter the queue. Every offered entry
+is eventually polled, so offers and polls both equal successful relaxations
+plus one. Counters exclude later result queries and path reconstruction; do
+not sum overlapping scan and attempt counts as independent work.
+Valid calls reset counters, and rejected calls preserve the previous values.
+The algorithm instance is intended for single-threaded use.
+
 ## Complexity Analysis
 
 The graph representation requires `O(V + E)` storage. Each undirected non-loop
@@ -427,8 +494,17 @@ list and adjacency lists; visited flags, next-edge indices, stacks, finishing
 order, and the result require `O(V)` additional space. Both searches use explicit
 stacks rather than the Java call stack.
 
-The shortest-path algorithm has not been implemented yet, so its complexity
-analysis is not available.
+Dijkstra initializes arrays in `O(V)` time and validates all logical edges in
+`O(E)`, including unreachable components. Each reachable adjacency entry is
+scanned once and can cause at most one successful relaxation. The lazy queue
+can contain `O(E + 1)` entries, so the overall worst-case time is
+`O(V + E log(E + 1))`, including validation and copying the result arrays.
+This edge-based heap bound also covers parallel edges; for simple graphs the
+logarithmic factor can be expressed using `V`. Extra space is `O(V + E)` for
+distance and predecessor arrays, their result copies, and queued entries.
+Distance and reachability queries take `O(1)`. Reconstructing a path of `k`
+vertices takes `O(k)` time and extra space, with `k <= V`; paths are built only
+when requested rather than stored for every target.
 
 ## Experimental Setup
 
@@ -458,6 +534,12 @@ including both DFS passes, reversed-graph construction, traversal allocations,
 counter updates, and the deeply immutable result copy. Input generation and
 output remain outside the timer. Results will record component counts as well
 as the separate edge-scan counters.
+
+Dijkstra will time the complete `findShortestPaths` call, including source and
+negative-weight validation, distance and predecessor initialization, queue
+operations, adjacency scans, checked addition, counters, and result-array
+copies. Graph generation, result verification, path queries, and output remain
+outside the timer. The source vertex and graph direction will be recorded.
 
 ## Results
 
@@ -497,6 +579,13 @@ vertices into one SCC, and one-way links can connect distinct SCCs. Adding
 return paths may merge components. Kosaraju's three edge-scan phases still
 examine `3E` edges regardless of the number of components; those counters alone
 do not measure component sizes or predict exact elapsed time.
+
+Dijkstra minimizes distance from a chosen source to individual targets, while
+an MST minimizes the total cost of connecting an undirected component. Their
+selected edges need not match. Reachability also affects work: Dijkstra checks
+every logical edge for negative weights but only scans outgoing adjacency from
+vertices reachable from the source. Equal distances are compared by value and
+path validity rather than by one exact predecessor tree.
 
 ## Testing
 
@@ -572,6 +661,27 @@ must share a component exactly when they can reach each other. Separate
 20,000-vertex chain and cycle cases exercise both iterative passes: the chain
 must produce only singleton components, and the cycle one component containing
 every vertex. Coverage checks on these larger cases are linear.
+
+`DijkstraTest` contains 25 scenarios covering known distances and paths,
+nonzero sources, directed and undirected travel, disconnected and isolated
+vertices, single-vertex input, loops, zero-weight cycles, equal-cost routes,
+parallel edges, maximum integer weights, and distances beyond the integer
+range. Returned paths must follow actual adjacency, contain no repeated
+vertices, and have a cost equal to the reported distance. For parallel edges,
+the cheapest matching connection is used to validate each path step.
+
+Tests also cover obsolete queue entries without repeated adjacency scans,
+exact counter values, unreachable-edge validation, resets, invalid sources and
+targets, negative weights in any component, unchanged input, immutable paths,
+and copied result arrays. A 20,000-vertex chain exercises iterative path
+reconstruction without constructing paths to every target.
+
+An independent Floyd-Warshall distance oracle checks all 512 directed and 64
+undirected topologies on three vertices, including self-loops, with deterministic
+non-negative weights and every possible source. Another 60 multigraph cases
+use seed `41008`, both directions, loops, parallel edges, and weights from
+zero to ten. Every run checks distances, reachability, actual paths, and counter
+relationships against the same graph.
 
 Required cases include small and disconnected graphs, cycles, multiple valid
 MSTs, unreachable vertices, repeated edge weights, and a single vertex.
