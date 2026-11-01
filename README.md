@@ -12,8 +12,9 @@ cycle detection, strongly connected components, and Dijkstra shortest paths
 with route reconstruction. Correctness tests and build commands are included.
 The console application demonstrates all algorithms on small city graphs,
 including disconnected, cyclic, and unreachable cases. A seeded connected
-undirected graph generator is available for the required input sizes. Directed
-generators and the experiment runner have not been implemented yet.
+undirected graph generator and separate DAG and cyclic directed generators
+are available for the required input sizes. The experiment runner has not been
+implemented yet.
 
 ## Build and run
 
@@ -75,6 +76,7 @@ java -cp build/classes:build/test-classes cityplanner.connectivity.KosarajuTest
 java -cp build/classes:build/test-classes cityplanner.shortestpath.DijkstraTest
 java -cp build/classes:build/test-classes cityplanner.MainTest
 java -cp build/classes:build/test-classes cityplanner.experiments.ConnectedGraphGeneratorTest
+java -cp build/classes:build/test-classes cityplanner.experiments.DirectedGraphGeneratorTest
 java -cp build/classes cityplanner.Main
 ```
 
@@ -164,7 +166,8 @@ Current project layout:
     |   |   |-- Dijkstra.java
     |   |   `-- DijkstraResult.java
     |   `-- experiments/
-    |       `-- ConnectedGraphGenerator.java
+    |       |-- ConnectedGraphGenerator.java
+    |       `-- DirectedGraphGenerator.java
     `-- test/java/cityplanner/
         |-- MainTest.java
         |-- graph/
@@ -180,7 +183,8 @@ Current project layout:
         |-- shortestpath/
         |   `-- DijkstraTest.java
         `-- experiments/
-            `-- ConnectedGraphGeneratorTest.java
+            |-- ConnectedGraphGeneratorTest.java
+            `-- DirectedGraphGeneratorTest.java
 ```
 
 `Main` builds the small example graphs, calls the existing algorithm classes,
@@ -519,6 +523,44 @@ distribution over connected graphs is not uniform. The result can be passed
 directly to Kruskal, Prim, and Dijkstra. The console examples remain fixed;
 the generator is currently a Java API for reproducible experimental inputs.
 
+### Directed graph generation
+
+`DirectedGraphGenerator.generateDag(V, E, seed)` shuffles the vertices using
+Fisher-Yates, then selects edges only from earlier to later positions in that
+order. A cycle would have to return to an earlier position, so every generated
+graph is a DAG. Numeric vertex IDs do not have to increase along its edges.
+Valid sizes are `V >= 0` and `0 <= E <= V * (V - 1) / 2`; empty graphs and
+isolated vertices are supported. No connectivity requirement is imposed.
+
+`DirectedGraphGenerator.generateCyclic(V, E, seed)` guarantees a directed
+cycle without self-loops. It first shuffles the vertices and connects the first
+three in a cycle. When only two vertices or two edges are requested, it uses a
+two-vertex cycle instead. Extra edges are chosen from all remaining ordered
+pairs of distinct vertices. Valid sizes are `V >= 2` and
+`2 <= E <= V * (V - 1)`. Opposite edges `u -> v` and `v -> u` are distinct and
+allowed; repeating the same ordered pair is forbidden. Added edges can merge
+SCCs, while vertices outside the initial cycle can remain isolated.
+
+Both methods reject impossible sizes with `IllegalArgumentException` before
+graph allocation and use `long` for capacities. They return fresh directed
+`WeightedGraph` instances with exactly `E` logical edges and integer weights
+in `[0, 100]`, inclusive. Each method has its own `Random(seed)` per invocation.
+The same parameters and method reproduce edge order, directions, weights, and
+adjacency. Calls and returned graphs do not share mutable state. Both overall
+graph distributions are non-uniform.
+
+Extra edges use the same remaining-needed selection rule as the undirected
+generator: choose the current eligible pair when `random.nextLong(r) < k`,
+where `r` pairs remain and `k` edges are still needed. Each eligible pair is
+considered at most once, and initial cycle edges are skipped using ordered
+endpoint keys.
+No self-loops or duplicate directed edges are generated, including for complete
+allowed edge sets. DAG and cyclic inputs are separate scenarios for topological
+sorting, SCC analysis, and Dijkstra.
+
+Every SCC in a DAG is a singleton. The initial directed cycle belongs to an
+SCC with at least two vertices, even if later edges enlarge that component.
+
 ## Complexity Analysis
 
 The graph representation requires `O(V + E)` storage. Each undirected non-loop
@@ -594,6 +636,13 @@ time. When extra edges are needed, at most `V * (V - 1) / 2` pairs are visited,
 giving `O(V^2)` worst-case pair-processing time. No quadratic candidate-edge
 list is allocated. Generation is outside algorithm timing boundaries.
 
+Both directed generators use `O(V)` working storage for a shuffled order, plus
+the returned graph's `O(V + E)` storage. The reserved cycle-edge set has at most
+three entries. DAGs with no edges and cyclic graphs needing only the initial
+cycle take `O(V)` generation time. Otherwise the pair traversal visits at most
+`V * (V - 1) / 2` DAG candidates or `V * (V - 1)` directed candidates, giving
+`O(V^2)` pair-processing time without a quadratic candidate list.
+
 ## Experimental Setup
 
 The assignment requires graphs with `(V, E)` equal to `(10, 30)`, `(100, 500)`,
@@ -617,8 +666,27 @@ an adapter. For example, the first input can be recreated through the Java API:
 WeightedGraph graph = ConnectedGraphGenerator.generate(10, 30, 41100L);
 ```
 
-Graph seeds describe input generation, not measured results. The timing runner,
-five-run measurements, and directed input scenarios are not available yet.
+The directed scenarios use separate seeds for each construction:
+
+| Vertices | Edges | DAG seed | Cyclic seed | Dijkstra source |
+| ---: | ---: | ---: | ---: | ---: |
+| 10 | 30 | 41200 | 41300 | 0 |
+| 100 | 500 | 41201 | 41301 | 0 |
+| 1000 | 5000 | 41202 | 41302 | 0 |
+
+Both directed modes use weights in `[0, 100]`, no loops, and no repeated ordered
+pairs. DAGs have a valid topological order; cyclic scenarios always report a
+cycle. SCC counts depend on actual connectivity. Source `0` is valid for all
+prescribed cases, but directed reachability from it is not guaranteed; Dijkstra
+keeps unreachable targets explicit. Examples of regeneration through the API:
+
+```java
+WeightedGraph dag = DirectedGraphGenerator.generateDag(10, 30, 41200L);
+WeightedGraph cyclic = DirectedGraphGenerator.generateCyclic(10, 30, 41300L);
+```
+
+Graph seeds describe input generation, not measured results. The timing runner
+and five-run measurements are not available yet.
 
 Graph generation, warm-up, and console output will stay outside the timed
 algorithm call. Generation policies, operation counter definitions, timer
@@ -815,6 +883,21 @@ Dijkstra directly. Both MSTs must span every vertex and agree on weight; every
 vertex must be reachable from source zero, and sampled reconstructed paths
 must follow actual generated edges with matching costs. These are correctness
 checks, not benchmark measurements.
+
+`DirectedGraphGeneratorTest` contains 20 scenarios covering the six required
+directed cases, exact sizes and adjacency, no loops or duplicate ordered pairs,
+weights, deterministic regeneration, independent mutable results, invalid
+configurations, dense inputs, and capacity arithmetic at `V = 50,000`.
+Known component cases include two- and three-vertex cycles and a triangle with
+isolated vertices. Empty and single-vertex DAGs and unreachable routes are
+checked explicitly.
+
+The small-case matrix contains 192 DAG inputs and 195 cyclic inputs. An
+independent transitive-closure oracle checks nonempty cycles and mutual
+reachability, while Floyd-Warshall verifies distances from every possible
+source. Required larger cases use topological order validation, SCC coverage,
+independent BFS reachability, and actual path costs. These remain correctness
+tests; they do not collect experiment timings.
 
 Required cases include small and disconnected graphs, cycles, multiple valid
 MSTs, unreachable vertices, repeated edge weights, and a single vertex.
