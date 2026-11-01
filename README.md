@@ -13,8 +13,8 @@ with route reconstruction. Correctness tests and build commands are included.
 The console application demonstrates all algorithms on small city graphs,
 including disconnected, cyclic, and unreachable cases. A seeded connected
 undirected graph generator and separate DAG and cyclic directed generators
-are available for the required input sizes. The experiment runner has not been
-implemented yet.
+are available for the required input sizes. A shared timing and CSV runner
+measures Kruskal and Prim. Directed algorithm experiments and plots are pending.
 
 ## Build and run
 
@@ -45,6 +45,24 @@ directory. A failed test stops the command with a nonzero exit code.
 `run` compiles and prints all six examples without running tests. No interactive
 input is required. Commands also work from other directories when the script
 is called by its full path.
+
+After correctness checks, collect the MST measurements:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\project.ps1 benchmark-mst
+```
+
+This command rebuilds production sources and writes `mst-runs.csv`,
+`mst-summary.csv`, and `mst-environment.csv` under the repository's
+`results/tables/`, even when invoked from another working directory.
+Rerunning replaces these three files with a fresh capture. A custom output
+directory can be supplied without changing the saved report data:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\project.ps1 benchmark-mst -ResultsDirectory '.\build\mst sample'
+```
+
+Relative custom paths are resolved from the caller's working directory.
 
 `-ExecutionPolicy Bypass` permits the local script in this PowerShell process
 only; it does not change the machine or user execution policy. It is needed on
@@ -77,7 +95,11 @@ java -cp build/classes:build/test-classes cityplanner.shortestpath.DijkstraTest
 java -cp build/classes:build/test-classes cityplanner.MainTest
 java -cp build/classes:build/test-classes cityplanner.experiments.ConnectedGraphGeneratorTest
 java -cp build/classes:build/test-classes cityplanner.experiments.DirectedGraphGeneratorTest
+java -cp build/classes:build/test-classes cityplanner.experiments.BenchmarkRunnerTest
+java -cp build/classes:build/test-classes cityplanner.experiments.BenchmarkCsvTest
+java -cp build/classes:build/test-classes cityplanner.experiments.MstExperimentsTest
 java -cp build/classes cityplanner.Main
+java -cp build/classes cityplanner.experiments.MstExperiments results/tables
 ```
 
 These Unix commands have not yet been executed on a Unix system.
@@ -145,6 +167,11 @@ Current project layout:
 |-- README.md
 |-- scripts/
 |   `-- project.ps1
+|-- results/
+|   `-- tables/
+|       |-- mst-environment.csv
+|       |-- mst-runs.csv
+|       `-- mst-summary.csv
 `-- src/
     |-- main/java/cityplanner/
     |   |-- Main.java
@@ -166,8 +193,11 @@ Current project layout:
     |   |   |-- Dijkstra.java
     |   |   `-- DijkstraResult.java
     |   `-- experiments/
+    |       |-- BenchmarkCsv.java
+    |       |-- BenchmarkRunner.java
     |       |-- ConnectedGraphGenerator.java
-    |       `-- DirectedGraphGenerator.java
+    |       |-- DirectedGraphGenerator.java
+    |       `-- MstExperiments.java
     `-- test/java/cityplanner/
         |-- MainTest.java
         |-- graph/
@@ -183,8 +213,11 @@ Current project layout:
         |-- shortestpath/
         |   `-- DijkstraTest.java
         `-- experiments/
+            |-- BenchmarkCsvTest.java
+            |-- BenchmarkRunnerTest.java
             |-- ConnectedGraphGeneratorTest.java
-            `-- DirectedGraphGeneratorTest.java
+            |-- DirectedGraphGeneratorTest.java
+            `-- MstExperimentsTest.java
 ```
 
 `Main` builds the small example graphs, calls the existing algorithm classes,
@@ -561,6 +594,29 @@ sorting, SCC analysis, and Dijkstra.
 Every SCC in a DAG is a singleton. The initial directed cycle belongs to an
 SCC with at least two vertices, even if later edges enlarge that component.
 
+### Timing and CSV runner
+
+`BenchmarkRunner` measures algorithm tasks and captures immutable raw runs.
+A `GraphCase` records scenario, size, seed, and direction; an `Algorithm`
+provides a factory for a fresh task. Only `Task.execute()` is inside the timer.
+Result fields and operation counters are copied after the stop timestamp.
+`summarize` groups rows by the complete input metadata and algorithm name,
+requires five distinct run numbers, checks stable outcomes and counter schemas,
+and averages each counter separately. Floating-point accumulation avoids
+overflowing a `long` sum; raw nanoseconds remain integers.
+
+`MstExperiments` generates one connected graph per required size and passes
+that same graph to both factories. Every task contains a new Kruskal or Prim
+instance. Its timed operation calls the existing forest method and stores its
+result. After measurement, both methods must report one component, `V - 1`
+selected edges, and the same total weight. Exceptions stop the experiment.
+
+`BenchmarkCsv` exports UTF-8 CSV with LF record separators. Named counter and
+result columns are sorted. A counter that does not apply to an algorithm has
+an empty cell, which is different from zero. CSV quoting preserves commas,
+quotes, line breaks, and Unicode. Environment metadata is a separate key/value
+file. Output validation happens before writing; filesystem errors propagate.
+
 ## Complexity Analysis
 
 The graph representation requires `O(V + E)` storage. Each undirected non-loop
@@ -685,8 +741,32 @@ WeightedGraph dag = DirectedGraphGenerator.generateDag(10, 30, 41200L);
 WeightedGraph cyclic = DirectedGraphGenerator.generateCyclic(10, 30, 41300L);
 ```
 
-Graph seeds describe input generation, not measured results. The timing runner
-and five-run measurements are not available yet.
+Graph seeds reproduce inputs; timings are measured afresh on every invocation.
+The implemented timing command currently covers the connected MST cases.
+Directed algorithm measurements are pending.
+
+For each graph, three untimed warm-up rounds exercise both algorithms. The
+runner then performs five measured rounds using elapsed differences of
+`System.nanoTime()`. Odd rounds run Kruskal before Prim; even rounds reverse
+that order. Warm-up calls are excluded from raw rows and averages. Every call
+gets a newly constructed task and algorithm instance outside the timed region.
+Warm-up and measured results must agree for each algorithm/input group.
+
+The timed interval includes the full algorithm method: copying, sorting or
+queue work, DSU or visited-state allocation, operation counter updates, and
+result construction. It also includes task dispatch and storing the returned
+result. Graph generation, factory construction, counter extraction, correctness
+checks, CSV formatting, and file output are outside. Timings include the
+algorithms' instrumentation; counters of different kinds are never combined
+into one operation total. Clock and dispatch overhead are not subtracted.
+
+The environment CSV records UTC capture time, Java and VM versions, operating
+system and architecture, processors available to the JVM, its maximum heap,
+warm-up and measured counts, timing scope, weight bounds, and algorithm order.
+Maximum heap is a JVM limit, not installed physical RAM. Three warm-ups and
+five measurements form a small experiment; JVM compilation, garbage collection,
+background activity, and timer overhead can affect the results, especially
+for the smallest input. This is a simple instrumented Java benchmark.
 
 Graph generation, warm-up, and console output will stay outside the timed
 algorithm call. Generation policies, operation counter definitions, timer
@@ -696,7 +776,7 @@ Kruskal's complete method is the timing boundary: copying and sorting edges,
 DSU initialization, edge selection, counter updates, and the immutable result
 copy are included. Input generation and console/file output remain outside.
 
-Prim's complete method will use the same timing boundary: visited state and
+Prim's complete method uses the same timing boundary: visited state and
 queue allocation, adjacency scans, heap operations, counters, and the result
 copy are included. Both methods will receive the same input graphs.
 
@@ -719,9 +799,23 @@ outside the timer. The source vertex and graph direction will be recorded.
 
 ## Results
 
-No measurements have been collected. Raw runs and summary tables will be stored
-in `results/tables/`; plots will be stored in `results/plots/` and embedded here.
-The report will include execution time against both vertex count and edge count.
+The saved MST capture contains 30 measured rows and six summary groups:
+
+- [Raw intervals, counters, seeds, and outcomes](results/tables/mst-runs.csv).
+- [Five-run averages in nanoseconds and milliseconds](results/tables/mst-summary.csv).
+- [Capture environment and measurement settings](results/tables/mst-environment.csv).
+
+| Vertices | Edges | Kruskal total weight | Prim total weight |
+| ---: | ---: | ---: | ---: |
+| 10 | 30 | 101 | 101 |
+| 100 | 500 | 1075 | 1075 |
+| 1000 | 5000 | 11741 | 11741 |
+
+Every measured result is connected and contains `V - 1` selected edges.
+The raw file preserves all five intervals per algorithm/input; the summary
+contains their arithmetic means and separate counter means. Reproducing the
+command preserves graph-dependent results but produces new timings and capture
+metadata. Directed measurements, plots, and the full comparison are pending.
 
 ## Comparison and Discussion
 
@@ -736,7 +830,7 @@ weights can produce different correct edge selections and orientations.
 | Disconnected input | DSU tracks all components | A tree starts at each unvisited component |
 | Main measured operations | Sorting comparisons, edge scans, DSU operations | Adjacency scans, queue offers/polls/comparisons |
 
-Execution-time comparisons are pending measured results. The final discussion
+The MST capture is available for inspection. The final discussion
 will explain DSU optimizations and examine SCC, topological ordering, and
 Dijkstra as the graphs grow. Since the required cases increase both V and E
 together, the two required plots will not independently isolate their effects.
@@ -764,6 +858,25 @@ vertices reachable from the source. Equal distances are compared by value and
 path validity rather than by one exact predecessor tree.
 
 ## Testing
+
+`BenchmarkRunnerTest` contains 17 scenarios using controlled clocks and task
+factories. They verify timer boundaries, fresh state for every call, exclusion
+of warm-ups, alternating measured order, five-run coverage, elapsed differences,
+zero durations, independent counter means, large-value averaging, immutable
+snapshots, and visible failures for inconsistent or invalid data.
+
+`MstExperimentsTest` adds 11 scenarios for the real adapters and generated
+cases: thirty measured rows, six groups, stable MST outcomes, algorithm-specific
+counters, fresh task and algorithm state, one shared input per case, and
+rejection of weight disagreements or incomplete results. Runtime thresholds
+and algorithm speed rankings are not test assertions.
+
+`BenchmarkCsvTest` adds 11 scenarios for controlled averages and CSV schemas,
+inapplicable empty metrics, escaping and Unicode, locale-independent numbers,
+sorted metadata, directory creation, repeated export, invalid prefixes and
+incomplete groups, and visible I/O failures. The benchmark command is also
+checked from another working directory with its default output and a custom
+path containing spaces.
 
 `MainTest` contains eight integration scenarios that invoke the real
 `Main.main`, capture UTF-8 console output, and restore standard output in a

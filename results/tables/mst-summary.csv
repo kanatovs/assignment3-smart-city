@@ -1,0 +1,7 @@
+scenario,vertices,edges,seed,directed,algorithm,measured_runs,average_elapsed_ns,average_elapsed_ms,avg_counter_edge_examinations,avg_counter_find_calls,avg_counter_parent_traversals,avg_counter_queue_comparisons,avg_counter_queue_offers,avg_counter_queue_polls,avg_counter_sorting_comparisons,avg_counter_union_calls,result_component_count,result_selected_edges,result_total_weight
+connected-undirected,10,30,41100,false,Kruskal,5,28560.0,0.02856,10.0,20.0,20.0,,,,110.0,10.0,1,9,101
+connected-undirected,10,30,41100,false,Prim,5,42340.0,0.04234,60.0,,,208.0,30.0,30.0,,,1,9,101
+connected-undirected,100,500,41101,false,Kruskal,5,216780.0,0.21678,226.0,452.0,740.0,,,,3841.0,226.0,1,99,1075
+connected-undirected,100,500,41101,false,Prim,5,152680.0,0.15268,1000.0,,,7683.0,500.0,500.0,,,1,99,1075
+connected-undirected,1000,5000,41102,false,Kruskal,5,1511000.0,1.511,3953.0,7906.0,14694.0,,,,50435.0,3953.0,1,999,11741
+connected-undirected,1000,5000,41102,false,Prim,5,1177380.0,1.17738,10000.0,,,110900.0,5000.0,5000.0,,,1,999,11741

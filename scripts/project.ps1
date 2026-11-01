@@ -1,6 +1,7 @@
 param(
-    [ValidateSet('check', 'run')]
-    [string]$Task = 'check'
+    [ValidateSet('check', 'run', 'benchmark-mst')]
+    [string]$Task = 'check',
+    [string]$ResultsDirectory
 )
 
 $ErrorActionPreference = 'Stop'
@@ -68,6 +69,17 @@ if ($Task -eq 'run') {
     & $java -cp $classesDirectory cityplanner.Main
     if ($LASTEXITCODE -ne 0) {
         throw 'Application execution failed.'
+    }
+    exit 0
+}
+
+if ($Task -eq 'benchmark-mst') {
+    if (-not $ResultsDirectory) {
+        $ResultsDirectory = Join-Path $projectRoot 'results/tables'
+    }
+    & $java -cp $classesDirectory cityplanner.experiments.MstExperiments $ResultsDirectory
+    if ($LASTEXITCODE -ne 0) {
+        throw 'MST experiments failed.'
     }
     exit 0
 }
