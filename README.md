@@ -11,8 +11,9 @@ Kruskal and Prim minimum spanning forest algorithms, topological sorting with
 cycle detection, strongly connected components, and Dijkstra shortest paths
 with route reconstruction. Correctness tests and build commands are included.
 The console application demonstrates all algorithms on small city graphs,
-including disconnected, cyclic, and unreachable cases. Experiments have not
-been implemented yet.
+including disconnected, cyclic, and unreachable cases. A seeded connected
+undirected graph generator is available for the required input sizes. Directed
+generators and the experiment runner have not been implemented yet.
 
 ## Build and run
 
@@ -73,6 +74,7 @@ java -cp build/classes:build/test-classes cityplanner.connectivity.TopologicalSo
 java -cp build/classes:build/test-classes cityplanner.connectivity.KosarajuTest
 java -cp build/classes:build/test-classes cityplanner.shortestpath.DijkstraTest
 java -cp build/classes:build/test-classes cityplanner.MainTest
+java -cp build/classes:build/test-classes cityplanner.experiments.ConnectedGraphGeneratorTest
 java -cp build/classes cityplanner.Main
 ```
 
@@ -158,9 +160,11 @@ Current project layout:
     |   |   |-- SccResult.java
     |   |   |-- TopologicalSort.java
     |   |   `-- TopologicalSortResult.java
-    |   `-- shortestpath/
-    |       |-- Dijkstra.java
-    |       `-- DijkstraResult.java
+    |   |-- shortestpath/
+    |   |   |-- Dijkstra.java
+    |   |   `-- DijkstraResult.java
+    |   `-- experiments/
+    |       `-- ConnectedGraphGenerator.java
     `-- test/java/cityplanner/
         |-- MainTest.java
         |-- graph/
@@ -173,8 +177,10 @@ Current project layout:
         |-- connectivity/
         |   |-- KosarajuTest.java
         |   `-- TopologicalSortTest.java
-        `-- shortestpath/
-            `-- DijkstraTest.java
+        |-- shortestpath/
+        |   `-- DijkstraTest.java
+        `-- experiments/
+            `-- ConnectedGraphGeneratorTest.java
 ```
 
 `Main` builds the small example graphs, calls the existing algorithm classes,
@@ -483,6 +489,36 @@ not sum overlapping scan and attempt counts as independent work.
 Valid calls reset counters, and rejected calls preserve the previous values.
 The algorithm instance is intended for single-threaded use.
 
+### Connected graph generation
+
+`ConnectedGraphGenerator.generate(vertexCount, edgeCount, seed)` creates a
+fresh connected undirected `WeightedGraph`. It accepts `V >= 1` and
+`V - 1 <= E <= V * (V - 1) / 2`; invalid sizes cause
+`IllegalArgumentException` before graph allocation. Capacity arithmetic uses
+`long` to avoid overflow. A single vertex with zero edges is valid. Empty
+input is rejected because this generator promises a connected result.
+
+Each call creates its own `Random(seed)`. A Fisher-Yates shuffle gives a
+vertex order, then every vertex after the first connects to a randomly chosen
+earlier vertex. These `V - 1` edges form a spanning tree. All later additions
+preserve connectivity. Weights are integers from `MIN_WEIGHT = 0` through
+`MAX_WEIGHT = 100`, inclusive; repeated weights are allowed.
+
+For extra edges, the generator visits unordered pairs `u < v`, skipping tree
+edges using a set of canonical endpoint keys. If `k` more edges are needed
+among `r` remaining pairs, the current pair is selected when
+`random.nextLong(r) < k`. Remaining counts are updated after each decision.
+This samples extra edges without replacement and stops when exactly `E` edges
+exist. No self-loops or duplicate unordered connections are produced, including
+when a tree edge has the opposite stored orientation. Complete graphs are
+supported by the same bounded pair traversal.
+
+The same `(V, E, seed)` reproduces the logical edge order, orientations, and
+weights. Separate calls do not share random state or graph storage. The
+distribution over connected graphs is not uniform. The result can be passed
+directly to Kruskal, Prim, and Dijkstra. The console examples remain fixed;
+the generator is currently a Java API for reproducible experimental inputs.
+
 ## Complexity Analysis
 
 The graph representation requires `O(V + E)` storage. Each undirected non-loop
@@ -551,11 +587,38 @@ Distance and reachability queries take `O(1)`. Reconstructing a path of `k`
 vertices takes `O(k)` time and extra space, with `k <= V`; paths are built only
 when requested rather than stored for every target.
 
+Connected graph generation uses `O(V)` working storage for the vertex order
+and tree-edge set, in addition to the returned graph's `O(V + E)` storage.
+With expected constant-time hash lookups, tree-only generation takes `O(V)`
+time. When extra edges are needed, at most `V * (V - 1) / 2` pairs are visited,
+giving `O(V^2)` worst-case pair-processing time. No quadratic candidate-edge
+list is allocated. Generation is outside algorithm timing boundaries.
+
 ## Experimental Setup
 
 The assignment requires graphs with `(V, E)` equal to `(10, 30)`, `(100, 500)`,
 and `(1000, 5000)`. Experiments will use fixed random seeds and five measured
 runs per case, timed with `System.nanoTime()`.
+
+The connected undirected input configuration is:
+
+| Vertices | Logical edges | Seed | Dijkstra source |
+| ---: | ---: | ---: | ---: |
+| 10 | 30 | 41100 | 0 |
+| 100 | 500 | 41101 | 0 |
+| 1000 | 5000 | 41102 | 0 |
+
+All three cases use weights in `[0, 100]`, no loops, and no parallel edges.
+The initial spanning tree guarantees that source `0` can reach every vertex.
+Kruskal and Prim will receive the same graph, and Dijkstra can use it without
+an adapter. For example, the first input can be recreated through the Java API:
+
+```java
+WeightedGraph graph = ConnectedGraphGenerator.generate(10, 30, 41100L);
+```
+
+Graph seeds describe input generation, not measured results. The timing runner,
+five-run measurements, and directed input scenarios are not available yet.
 
 Graph generation, warm-up, and console output will stay outside the timed
 algorithm call. Generation policies, operation counter definitions, timer
@@ -738,6 +801,20 @@ non-negative weights and every possible source. Another 60 multigraph cases
 use seed `41008`, both directions, loops, parallel edges, and weights from
 zero to ten. Every run checks distances, reachability, actual paths, and counter
 relationships against the same graph.
+
+`ConnectedGraphGeneratorTest` contains 16 scenarios covering all three required
+sizes, exact edge counts, independent BFS connectivity, both weighted adjacency
+orientations, weight bounds, no loops or repeated connections, reproducible
+seeds, and independent mutable results. Cases include a single vertex, two
+vertices, trees, complete and nearly complete graphs, invalid sizes, and a
+50,000-vertex tree that requires overflow-safe capacity arithmetic.
+
+A matrix checks 693 small inputs: every valid edge count for `V = 2` through
+`12` with three seeds. The prescribed larger cases also run Kruskal, Prim, and
+Dijkstra directly. Both MSTs must span every vertex and agree on weight; every
+vertex must be reachable from source zero, and sampled reconstructed paths
+must follow actual generated edges with matching costs. These are correctness
+checks, not benchmark measurements.
 
 Required cases include small and disconnected graphs, cycles, multiple valid
 MSTs, unreachable vertices, repeated edge weights, and a single vertex.
