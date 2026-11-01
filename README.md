@@ -8,9 +8,9 @@ and shortest routes.
 
 The project includes a weighted graph model, a disjoint set union structure,
 Kruskal and Prim minimum spanning forest algorithms, topological sorting with
-cycle detection, correctness tests, and build commands. The console entry point
-currently prints the project title. Strongly connected components, shortest
-paths, and experiments have not been implemented yet.
+cycle detection, strongly connected components, correctness tests, and build
+commands. The console entry point currently prints the project title.
+Shortest paths and experiments have not been implemented yet.
 
 ## Build and run
 
@@ -67,6 +67,7 @@ java -cp build/classes:build/test-classes cityplanner.dsu.DisjointSetUnionTest
 java -cp build/classes:build/test-classes cityplanner.mst.KruskalTest
 java -cp build/classes:build/test-classes cityplanner.mst.PrimTest
 java -cp build/classes:build/test-classes cityplanner.connectivity.TopologicalSortTest
+java -cp build/classes:build/test-classes cityplanner.connectivity.KosarajuTest
 java -cp build/classes cityplanner.Main
 ```
 
@@ -110,6 +111,8 @@ Current project layout:
     |   |   |-- MstResult.java
     |   |   `-- Prim.java
     |   `-- connectivity/
+    |       |-- Kosaraju.java
+    |       |-- SccResult.java
     |       |-- TopologicalSort.java
     |       `-- TopologicalSortResult.java
     `-- test/java/cityplanner/
@@ -121,6 +124,7 @@ Current project layout:
         |   |-- KruskalTest.java
         |   `-- PrimTest.java
         `-- connectivity/
+            |-- KosarajuTest.java
             `-- TopologicalSortTest.java
 ```
 
@@ -317,6 +321,56 @@ Every valid invocation resets counters and creates fresh indegrees, queue, and
 order. Invalid input preserves the previous counters. Read counters before
 reusing the instance; it is intended for single-threaded use.
 
+### Strongly connected components
+
+`Kosaraju.findStronglyConnectedComponents(graph)` partitions a directed graph
+into strongly connected components (SCCs). Within a component, each vertex can
+reach every other vertex by directed paths. One-way reachability between two
+groups does not make them one component. A DAG therefore has one component per
+vertex, even if its underlying undirected graph is connected.
+
+Kosaraju uses two iterative depth-first searches and a reversed graph:
+
+1. Visit all vertices in the original graph and record each vertex after its
+   outgoing edges have been examined. An explicit stack and a next-edge index
+   per vertex preserve DFS finishing order without recursion.
+2. Create another `WeightedGraph` with the same vertices and every edge
+   reversed. Weights and parallel-edge multiplicity are preserved; the original
+   graph is unchanged.
+3. Clear visited flags and search the reversed graph in decreasing finishing
+   order. Every search starting at an unvisited vertex produces one component.
+   Vertices are marked when pushed, so each enters the stack only once per pass.
+
+Decreasing finishing order prevents the second pass from merging different
+unassigned components. Reversing edges preserves mutual reachability within
+each SCC while changing the direction of connections between SCCs.
+
+`SccResult.components()` is a detached snapshot whose outer list and every
+inner list are read-only. `componentCount()` gives the number of groups. Every
+vertex belongs to exactly one nonempty group; empty input produces no groups.
+A single isolated vertex, or a vertex with only self-loops, forms one group.
+The result constructor copies both list levels and rejects empty inner groups
+and null lists or members. Component order and vertex order within a group are
+traversal details, so callers should compare membership rather than list order.
+
+Self-loops, parallel edges, and arbitrary integer weights are supported.
+Weights do not affect reachability. Undirected input is rejected with
+`IllegalArgumentException`, and null input with `NullPointerException`, before
+any counters are reset. The mutable algorithm instance is for single-threaded
+use; valid invocations reset counters and allocate fresh traversal state.
+
+| Counter on `Kosaraju` | Meaning |
+| --- | --- |
+| `firstPassEdgeExaminations()` | Original outgoing edges scanned to obtain finishing order |
+| `reversalEdgeExaminations()` | Logical edges read while constructing the reversed graph |
+| `secondPassEdgeExaminations()` | Reversed outgoing edges scanned while collecting components |
+| `edgeExaminations()` | Sum of the three phase counters |
+
+Each phase examines exactly `E` edges, including loops and parallel edges, so
+the total is `3E` for every valid run. Vertex loops, stack operations, allocation,
+and result copying are outside these counters. Invalid calls preserve previous
+values; read counters before reusing the instance.
+
 ## Complexity Analysis
 
 The graph representation requires `O(V + E)` storage. Each undirected non-loop
@@ -364,8 +418,17 @@ some vertices. Extra space is `O(V)` for indegrees, the FIFO queue, the order,
 and its immutable snapshot. The implementation is iterative and uses no
 recursive DFS or reversed graph.
 
-Strongly connected components and shortest-path algorithms have not been
-implemented yet, so their complexity analysis is not available.
+Kosaraju takes `O(V + E)` time: both DFS passes visit every vertex and scan
+every outgoing edge, and graph reversal copies every edge once. The result
+contains `V` vertex memberships and at most `V` components, so its defensive
+copy also takes `O(V)`. Extra space is `O(V + E)`: the reversed graph stores
+`V` adjacency lists and `E` edge records with references in its logical edge
+list and adjacency lists; visited flags, next-edge indices, stacks, finishing
+order, and the result require `O(V)` additional space. Both searches use explicit
+stacks rather than the Java call stack.
+
+The shortest-path algorithm has not been implemented yet, so its complexity
+analysis is not available.
 
 ## Experimental Setup
 
@@ -389,6 +452,12 @@ Topological sorting will time the complete `sort` call, including indegree
 initialization, queue and order allocation, both edge-scanning phases, cycle
 detection, counters, and result construction. Graph generation and output will
 remain outside the timer; DAG and cyclic cases will be labeled separately.
+
+Kosaraju will time the complete `findStronglyConnectedComponents` call,
+including both DFS passes, reversed-graph construction, traversal allocations,
+counter updates, and the deeply immutable result copy. Input generation and
+output remain outside the timer. Results will record component counts as well
+as the separate edge-scan counters.
 
 ## Results
 
@@ -421,6 +490,13 @@ but such a prefix is not a topological order of the whole graph. The result
 therefore exposes a complete order only when no cycle exists. Cyclic cases can
 perform fewer processing-phase edge examinations than DAGs, while both still
 scan all input edges during indegree initialization.
+
+SCC membership measures mutual reachability, whereas topological sorting asks
+whether all dependencies can be ordered. A directed cycle can group several
+vertices into one SCC, and one-way links can connect distinct SCCs. Adding
+return paths may merge components. Kosaraju's three edge-scan phases still
+examine `3E` edges regardless of the number of components; those counters alone
+do not measure component sizes or predict exact elapsed time.
 
 ## Testing
 
@@ -481,6 +557,21 @@ directed graph topologies on three vertices, including self-loops. It checks
 whether any permutation satisfies every edge without using Kahn's algorithm or
 another production algorithm. A separate chain of 20,000 vertices verifies
 the unique order and exercises the implementation without recursion.
+
+`KosarajuTest` contains 20 scenarios covering known component memberships,
+one-way links, DAGs, disconnected cycles, isolated vertices, empty and
+single-vertex inputs, self-loops, parallel edges, arbitrary weights, and a
+branching DFS that requires finishing order. Each partition must cover every
+vertex exactly once; component and member order are ignored. Tests also verify
+the three edge-scan counters, repeated and invalid calls, unchanged graph data,
+and deeply immutable detached results.
+
+An independent reachability oracle uses Floyd-Warshall transitive closure for
+all 512 directed three-vertex topologies, including self-loops. Two vertices
+must share a component exactly when they can reach each other. Separate
+20,000-vertex chain and cycle cases exercise both iterative passes: the chain
+must produce only singleton components, and the cycle one component containing
+every vertex. Coverage checks on these larger cases are linear.
 
 Required cases include small and disconnected graphs, cycles, multiple valid
 MSTs, unreachable vertices, repeated edge weights, and a single vertex.
