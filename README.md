@@ -7,9 +7,9 @@ and shortest routes.
 ## Project status
 
 The project includes a weighted graph model, a disjoint set union structure,
-Kruskal's minimum spanning forest algorithm, correctness tests, and build
-commands. The console entry point currently prints the project title.
-Prim, directed connectivity, shortest paths, and experiments have not been
+Kruskal and Prim minimum spanning forest algorithms, correctness tests, and
+build commands. The console entry point currently prints the project title.
+Directed connectivity, shortest paths, and experiments have not been
 implemented yet.
 
 ## Build and run
@@ -65,6 +65,7 @@ javac --release 17 -encoding UTF-8 -Xlint:all -Werror \
 java -cp build/classes:build/test-classes cityplanner.graph.WeightedGraphTest
 java -cp build/classes:build/test-classes cityplanner.dsu.DisjointSetUnionTest
 java -cp build/classes:build/test-classes cityplanner.mst.KruskalTest
+java -cp build/classes:build/test-classes cityplanner.mst.PrimTest
 java -cp build/classes cityplanner.Main
 ```
 
@@ -105,14 +106,16 @@ Current project layout:
     |   |   `-- DisjointSetUnion.java
     |   `-- mst/
     |       |-- Kruskal.java
-    |       `-- MstResult.java
+    |       |-- MstResult.java
+    |       `-- Prim.java
     `-- test/java/cityplanner/
         |-- graph/
         |   `-- WeightedGraphTest.java
         |-- dsu/
         |   `-- DisjointSetUnionTest.java
         `-- mst/
-            `-- KruskalTest.java
+            |-- KruskalTest.java
+            `-- PrimTest.java
 ```
 
 `Main` prints the project title. The PowerShell script compiles the source files
@@ -224,6 +227,47 @@ edge causes one union attempt and two finds. Read counters before reusing the
 same instance for another graph. Invalid input is rejected before counters
 are reset. The algorithm instance is intended for single-threaded use.
 
+### Prim
+
+`Prim.findMinimumSpanningForest(graph)` grows a tree from an unvisited vertex.
+It marks the vertex as visited and adds its edges to unvisited neighbors to a
+`PriorityQueue`, ordered by weight using `Integer.compare`. The lightest edge
+is removed next. If its target is still unvisited, the edge is selected and the
+new vertex's outgoing edges are scanned. If its target has already been visited,
+the queue entry is obsolete and is skipped. This is a lazy edge-queue version
+of Prim; no DSU is used.
+
+When the queue becomes empty, the algorithm starts from the next unvisited
+vertex. This covers every disconnected component and counts isolated vertices,
+rather than returning only the first component's tree. Self-loops are scanned
+but never queued. Parallel edges, repeated weights, and negative weights are
+supported.
+
+Prim returns the same immutable `MstResult` as Kruskal, with a `long` total
+weight and the same empty, single-vertex, and input-validation conventions.
+Selected edges point from a visited vertex to a newly visited vertex, so their
+orientation can be the reverse of the original undirected input edge. Both
+orientations represent the same connection. Input adjacency and edge order are
+preserved. Equal-weight choices need not match Kruskal's selected edge list.
+
+| Counter on `Prim` | Meaning |
+| --- | --- |
+| `edgeExaminations()` | Adjacency entries scanned when visiting vertices |
+| `queueOffers()` | Edges inserted into the priority queue |
+| `queuePolls()` | Edges removed, including obsolete entries |
+| `queueComparisons()` | Weight comparator calls during queue operations |
+
+Every vertex is visited once, and each component's queue is fully drained.
+For `E` logical edges including `L` self-loops, this representation yields
+`2E - L` adjacency examinations and `E - L` queue offers and polls. A non-loop
+edge is queued once, when its first endpoint is visited. These counts use
+different definitions from Kruskal's logical edge examinations and must not be
+treated as identical units of work.
+
+All counters reset for a valid call, and visited state and the queue are fresh
+on every invocation. Rejected input preserves previous counters. Read counters
+before reusing the algorithm instance; it is intended for single-threaded use.
+
 ## Complexity Analysis
 
 The graph representation requires `O(V + E)` storage. Each undirected non-loop
@@ -257,7 +301,14 @@ copy. Sorting contributes the usual `O(E log E)` term for `E >= 2`. The explicit
 Extra space is `O(V + E)` for the DSU, edge copy, sorting storage, and result.
 Early termination reduces edge processing but does not skip copying or sorting.
 
-Prim, directed connectivity, and shortest-path algorithms have not been
+Prim scans all adjacency lists in `O(V + E)` time. The lazy queue can contain
+`O(E)` edge entries; at most `E` insertions and `E` removals each cost
+`O(log(E + 1))`. The overall worst-case time is `O(V + E log(E + 1))`, and extra
+space is `O(V + E)` for visited flags, queue entries, selected edges, and the
+immutable result. For simple graphs the logarithmic factor can be expressed
+using `V`; the `E` bound also covers this model's parallel edges.
+
+Directed connectivity and shortest-path algorithms have not been
 implemented yet, so their complexity analysis is not available.
 
 ## Experimental Setup
@@ -274,6 +325,10 @@ Kruskal's complete method is the timing boundary: copying and sorting edges,
 DSU initialization, edge selection, counter updates, and the immutable result
 copy are included. Input generation and console/file output remain outside.
 
+Prim's complete method will use the same timing boundary: visited state and
+queue allocation, adjacency scans, heap operations, counters, and the result
+copy are included. Both methods will receive the same input graphs.
+
 ## Results
 
 No measurements have been collected. Raw runs and summary tables will be stored
@@ -282,10 +337,21 @@ The report will include execution time against both vertex count and edge count.
 
 ## Comparison and Discussion
 
-Pending measured results. The discussion will compare Kruskal and Prim,
-explain DSU optimizations, and examine SCC, topological ordering, and Dijkstra
-as the graphs grow. Since the required cases increase both V and E together,
-the two required plots will not independently isolate their effects.
+Both MST algorithms minimize the weight of a spanning forest. Their results
+are compared by total weight, component count, and forest validity. Equal
+weights can produce different correct edge selections and orientations.
+
+| Aspect | Kruskal | Prim |
+| --- | --- | --- |
+| Input traversal | Sorted copy of logical edges | Adjacency lists and an edge priority queue |
+| Cycle prevention | DSU rejects an already connected pair | Edges to visited targets are skipped |
+| Disconnected input | DSU tracks all components | A tree starts at each unvisited component |
+| Main measured operations | Sorting comparisons, edge scans, DSU operations | Adjacency scans, queue offers/polls/comparisons |
+
+Execution-time comparisons are pending measured results. The final discussion
+will explain DSU optimizations and examine SCC, topological ordering, and
+Dijkstra as the graphs grow. Since the required cases increase both V and E
+together, the two required plots will not independently isolate their effects.
 
 ## Testing
 
@@ -320,6 +386,18 @@ all 64 simple undirected topologies on four vertices and 80 multigraph cases
 generated with seed `41004`. The oracle enumerates edge subsets and uses
 component labels instead of the production DSU. It is limited to at most eight
 edges per graph and is only used in tests.
+
+The same exhaustive cases also run Prim. Both results must be valid forests,
+match the independent minimum cost, and agree on total weight and component
+count. Undirected edge checks accept either orientation and preserve parallel
+edge multiplicity; matching an exact MST edge list is not required.
+
+`PrimTest` contains 14 scenarios covering connected and disconnected graphs,
+isolated vertices, empty and single-vertex inputs, loops, parallel edges,
+repeated and negative weights, integer limits, and totals outside the integer
+range. It also checks obsolete
+queue entries, edge orientation, counters, repeated calls, input preservation,
+immutable results, and invalid directed/null input.
 
 Required cases include small and disconnected graphs, cycles, multiple valid
 MSTs, unreachable vertices, repeated edge weights, and a single vertex.

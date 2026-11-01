@@ -269,8 +269,14 @@ public final class KruskalTest {
 
     private static void checkAgainstExhaustiveSearch(WeightedGraph graph, String example) {
         MstResult result = new Kruskal().findMinimumSpanningForest(graph);
+        MstResult primResult = new Prim().findMinimumSpanningForest(graph);
+        long minimumWeight = minimumForestWeight(graph);
         verifyForest(graph, result);
-        check(result.totalWeight() == minimumForestWeight(graph), "Minimum cost mismatch for " + example + ".");
+        verifyForest(graph, primResult);
+        check(result.totalWeight() == minimumWeight, "Kruskal minimum cost mismatch for " + example + ".");
+        check(primResult.totalWeight() == minimumWeight, "Prim minimum cost mismatch for " + example + ".");
+        check(result.componentCount() == primResult.componentCount(),
+                "Both algorithms must report the same component count for " + example + ".");
     }
 
     private static void verifyForest(WeightedGraph graph, MstResult result) {
@@ -279,7 +285,11 @@ public final class KruskalTest {
         List<Edge> availableEdges = new ArrayList<>(graph.edges());
         long weight = 0;
         for (Edge edge : result.edges()) {
-            check(availableEdges.remove(edge), "Every selected edge must come from the input.");
+            boolean present = availableEdges.remove(edge);
+            if (!present) {
+                present = availableEdges.remove(new Edge(edge.to(), edge.from(), edge.weight()));
+            }
+            check(present, "Every selected edge must come from the undirected input.");
             check(merge(selectedGroups, edge.from(), edge.to()), "Selected edges must not contain a cycle.");
             weight += edge.weight();
         }
