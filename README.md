@@ -7,10 +7,10 @@ and shortest routes.
 ## Project status
 
 The project includes a weighted graph model, a disjoint set union structure,
-Kruskal and Prim minimum spanning forest algorithms, correctness tests, and
-build commands. The console entry point currently prints the project title.
-Directed connectivity, shortest paths, and experiments have not been
-implemented yet.
+Kruskal and Prim minimum spanning forest algorithms, topological sorting with
+cycle detection, correctness tests, and build commands. The console entry point
+currently prints the project title. Strongly connected components, shortest
+paths, and experiments have not been implemented yet.
 
 ## Build and run
 
@@ -66,6 +66,7 @@ java -cp build/classes:build/test-classes cityplanner.graph.WeightedGraphTest
 java -cp build/classes:build/test-classes cityplanner.dsu.DisjointSetUnionTest
 java -cp build/classes:build/test-classes cityplanner.mst.KruskalTest
 java -cp build/classes:build/test-classes cityplanner.mst.PrimTest
+java -cp build/classes:build/test-classes cityplanner.connectivity.TopologicalSortTest
 java -cp build/classes cityplanner.Main
 ```
 
@@ -104,18 +105,23 @@ Current project layout:
     |   |   `-- WeightedGraph.java
     |   |-- dsu/
     |   |   `-- DisjointSetUnion.java
-    |   `-- mst/
-    |       |-- Kruskal.java
-    |       |-- MstResult.java
-    |       `-- Prim.java
+    |   |-- mst/
+    |   |   |-- Kruskal.java
+    |   |   |-- MstResult.java
+    |   |   `-- Prim.java
+    |   `-- connectivity/
+    |       |-- TopologicalSort.java
+    |       `-- TopologicalSortResult.java
     `-- test/java/cityplanner/
         |-- graph/
         |   `-- WeightedGraphTest.java
         |-- dsu/
         |   `-- DisjointSetUnionTest.java
-        `-- mst/
-            |-- KruskalTest.java
-            `-- PrimTest.java
+        |-- mst/
+        |   |-- KruskalTest.java
+        |   `-- PrimTest.java
+        `-- connectivity/
+            `-- TopologicalSortTest.java
 ```
 
 `Main` prints the project title. The PowerShell script compiles the source files
@@ -268,6 +274,49 @@ All counters reset for a valid call, and visited state and the queue are fresh
 on every invocation. Rejected input preserves previous counters. Read counters
 before reusing the algorithm instance; it is intended for single-threaded use.
 
+### Topological sorting
+
+`TopologicalSort.sort(graph)` uses Kahn's algorithm on a directed graph. An
+edge `u -> v` means that `u` must be processed before `v`. Edge weights do not
+affect this ordering, so zero, negative, and extreme integer weights are allowed.
+Undirected input causes `IllegalArgumentException`, and null input causes
+`NullPointerException` before any counters are reset.
+
+The algorithm first counts incoming edges for every vertex. All vertices with
+zero indegree enter an `ArrayDeque`. Removing a vertex adds it to the order and
+decreases the indegree of each outgoing neighbor. A neighbor enters the queue
+when its remaining indegree becomes zero. Parallel edges are counted and
+removed separately. The graph itself is never modified, and every component,
+including isolated vertices, is considered.
+
+`TopologicalSortResult` contains an immutable snapshot `order()` and a boolean
+`hasCycle()`. If all vertices are processed, the order contains every vertex
+once and places every edge's source before its target. Otherwise, a directed
+cycle prevents a complete ordering: `hasCycle()` is true and `order()` is empty.
+Any processed prefix is discarded. A self-loop is a cycle. The result reports
+the existence of a cycle without returning its vertices. Its constructor rejects
+a cyclic result with a nonempty order.
+
+An empty directed graph has a valid empty order and no cycle. A single isolated
+vertex has the order `[0]`. Different valid orders may exist: if only `0 -> 2`
+and `1 -> 2` are present, both `[0, 1, 2]` and `[1, 0, 2]` satisfy all
+dependencies. The FIFO queue uses ascending vertex IDs for the initial entries
+and adjacency insertion order for newly available neighbors. It is repeatable
+for an unchanged graph but does not promise the smallest lexicographic order.
+
+| Counter on `TopologicalSort` | Meaning |
+| --- | --- |
+| `indegreeEdgeExaminations()` | Logical edges scanned to initialize indegrees; always `E` for valid input |
+| `processingEdgeExaminations()` | Outgoing adjacency entries scanned from processed vertices |
+| `edgeExaminations()` | Sum of the two phase counters |
+
+For a DAG, processing examines another `E` edges, for a total of `2E`.
+For a cyclic graph, processing can stop before all edges are examined, so the
+total lies between `E` and `2E`. These counts exclude the loops over vertices.
+Every valid invocation resets counters and creates fresh indegrees, queue, and
+order. Invalid input preserves the previous counters. Read counters before
+reusing the instance; it is intended for single-threaded use.
+
 ## Complexity Analysis
 
 The graph representation requires `O(V + E)` storage. Each undirected non-loop
@@ -308,7 +357,14 @@ space is `O(V + E)` for visited flags, queue entries, selected edges, and the
 immutable result. For simple graphs the logarithmic factor can be expressed
 using `V`; the `E` bound also covers this model's parallel edges.
 
-Directed connectivity and shortest-path algorithms have not been
+Topological sorting initializes indegrees in `O(V + E)` time and processes
+each vertex at most once, scanning its outgoing edges once. The overall time
+is `O(V + E)`, including the result copy, even when a cycle prevents processing
+some vertices. Extra space is `O(V)` for indegrees, the FIFO queue, the order,
+and its immutable snapshot. The implementation is iterative and uses no
+recursive DFS or reversed graph.
+
+Strongly connected components and shortest-path algorithms have not been
 implemented yet, so their complexity analysis is not available.
 
 ## Experimental Setup
@@ -328,6 +384,11 @@ copy are included. Input generation and console/file output remain outside.
 Prim's complete method will use the same timing boundary: visited state and
 queue allocation, adjacency scans, heap operations, counters, and the result
 copy are included. Both methods will receive the same input graphs.
+
+Topological sorting will time the complete `sort` call, including indegree
+initialization, queue and order allocation, both edge-scanning phases, cycle
+detection, counters, and result construction. Graph generation and output will
+remain outside the timer; DAG and cyclic cases will be labeled separately.
 
 ## Results
 
@@ -352,6 +413,14 @@ Execution-time comparisons are pending measured results. The final discussion
 will explain DSU optimizations and examine SCC, topological ordering, and
 Dijkstra as the graphs grow. Since the required cases increase both V and E
 together, the two required plots will not independently isolate their effects.
+
+For dependency ordering, a valid result must satisfy every directed edge;
+matching one particular vertex sequence is unnecessary. Kahn's algorithm can
+process an acyclic component even when a different component contains a cycle,
+but such a prefix is not a topological order of the whole graph. The result
+therefore exposes a complete order only when no cycle exists. Cyclic cases can
+perform fewer processing-phase edge examinations than DAGs, while both still
+scan all input edges during indegree initialization.
 
 ## Testing
 
@@ -398,6 +467,20 @@ repeated and negative weights, integer limits, and totals outside the integer
 range. It also checks obsolete
 queue entries, edge orientation, counters, repeated calls, input preservation,
 immutable results, and invalid directed/null input.
+
+`TopologicalSortTest` contains 17 scenarios covering DAGs, disconnected
+components, isolated vertices, empty and single-vertex inputs, directed cycles,
+a cycle in a later component, an acyclic prefix leading into a cycle,
+self-loops, parallel edges, and arbitrary weights. Every successful order must
+contain each vertex exactly once and place the source of every edge before its
+target. Tests also check both counter phases, resets, invalid input, unchanged
+graph data, and immutable detached results.
+
+An independent oracle enumerates the six vertex permutations for all 512
+directed graph topologies on three vertices, including self-loops. It checks
+whether any permutation satisfies every edge without using Kahn's algorithm or
+another production algorithm. A separate chain of 20,000 vertices verifies
+the unique order and exercises the implementation without recursion.
 
 Required cases include small and disconnected graphs, cycles, multiple valid
 MSTs, unreachable vertices, repeated edge weights, and a single vertex.
