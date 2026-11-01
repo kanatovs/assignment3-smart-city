@@ -10,8 +10,9 @@ The project includes a weighted graph model, a disjoint set union structure,
 Kruskal and Prim minimum spanning forest algorithms, topological sorting with
 cycle detection, strongly connected components, and Dijkstra shortest paths
 with route reconstruction. Correctness tests and build commands are included.
-The console entry point currently prints the project title; console examples
-and experiments have not been implemented yet.
+The console application demonstrates all algorithms on small city graphs,
+including disconnected, cyclic, and unreachable cases. Experiments have not
+been implemented yet.
 
 ## Build and run
 
@@ -35,12 +36,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\project.ps1 run
 
 Both commands rebuild the generated classes from scratch. `check` compiles the
 application and tests with all compiler warnings enabled and treated as errors,
-verifies application startup, and runs every `*Test.java` class under
+checks the console examples, and runs every `*Test.java` class under
 `src/test/java`. Each test class has a `main` method and a package matching its
 directory. A failed test stops the command with a nonzero exit code.
 
-`run` compiles and starts the application without running tests. Commands also
-work from other directories when the script is called by its full path.
+`run` compiles and prints all six examples without running tests. No interactive
+input is required. Commands also work from other directories when the script
+is called by its full path.
 
 `-ExecutionPolicy Bypass` permits the local script in this PowerShell process
 only; it does not change the machine or user execution policy. It is needed on
@@ -70,15 +72,54 @@ java -cp build/classes:build/test-classes cityplanner.mst.PrimTest
 java -cp build/classes:build/test-classes cityplanner.connectivity.TopologicalSortTest
 java -cp build/classes:build/test-classes cityplanner.connectivity.KosarajuTest
 java -cp build/classes:build/test-classes cityplanner.shortestpath.DijkstraTest
+java -cp build/classes:build/test-classes cityplanner.MainTest
 java -cp build/classes cityplanner.Main
 ```
 
 These Unix commands have not yet been executed on a Unix system.
 
-Current application output:
+Each example prints its vertex IDs, names, and input edges before the results.
+`--` means an undirected connection, while `->` means a directed edge or a step
+along a route. Dependency weights of zero and SCC example weights of one are
+placeholders; those algorithms use direction and reachability rather than cost.
+
+| Console example | Expected result |
+| --- | --- |
+| Connected infrastructure | Kruskal and Prim each select four edges with total weight 21 |
+| Infrastructure with an isolated airport | Both return a forest of weight 21 with two components |
+| Construction dependencies: DAG | Every task appears once, with prerequisites before dependents |
+| Construction dependencies: cycle | No complete topological order exists |
+| Directed district connections | Three SCCs: `{Center, North, East}`, `{South, West}`, `{Airport}` |
+| Routes from Center | West is at distance 7; Airport is unreachable |
+
+Selected lines from the current output (the complete output also includes
+input edges, selected MST edges, and the other routes):
 
 ```text
 Smart City Infrastructure and Route Planning
+
+=== Infrastructure: connected districts ===
+Kruskal MST: weight=21, components=1, connected=true
+Prim MST: weight=21, components=1, connected=true
+Total weights agree: true
+
+=== Infrastructure: isolated airport ===
+Kruskal forest: weight=21, components=2, connected=false
+Prim forest: weight=21, components=2, connected=false
+
+=== Dependencies: DAG ===
+Topological order: Survey -> Budget -> Park -> Roadwork -> Inspection
+
+=== Dependencies: cycle ===
+No topological order: directed cycle detected.
+
+=== Directed districts: strongly connected components ===
+SCC count: 3
+
+=== Routes: shortest paths ===
+Source: Center
+  West: distance=7, path=Center -> East -> North -> South -> West
+  Airport: unreachable
 ```
 
 ## Overview
@@ -121,6 +162,7 @@ Current project layout:
     |       |-- Dijkstra.java
     |       `-- DijkstraResult.java
     `-- test/java/cityplanner/
+        |-- MainTest.java
         |-- graph/
         |   `-- WeightedGraphTest.java
         |-- dsu/
@@ -135,8 +177,11 @@ Current project layout:
             `-- DijkstraTest.java
 ```
 
-`Main` prints the project title. The PowerShell script compiles the source files
-with `javac` and runs the application with `java`, using tools from the same JDK.
+`Main` builds the small example graphs, calls the existing algorithm classes,
+and prints their results using district or task names. Algorithms still use
+integer vertex IDs; names belong to the console presentation. The PowerShell
+script compiles the source files with `javac` and runs the application with
+`java`, using tools from the same JDK.
 
 ### Graph representation
 
@@ -589,6 +634,15 @@ path validity rather than by one exact predecessor tree.
 
 ## Testing
 
+`MainTest` contains eight integration scenarios that invoke the real
+`Main.main`, capture UTF-8 console output, and restore standard output in a
+`finally` block. They check all six examples, printed input graphs, both MST
+edge selections and their costs, forest connectivity, valid dependency order,
+cycle reporting, SCC membership, shortest distances, actual route edges,
+unreachable output, and repeatable runs. Forest validation uses independent
+component labels. Valid orders and component memberships are checked without
+requiring one particular traversal sequence.
+
 `WeightedGraphTest` contains 11 test scenarios covering directed and undirected
 adjacency, empty and single-vertex graphs, isolated vertices, parallel edges,
 repeated weights, self-loops, zero and negative weights, and integer weight
@@ -597,7 +651,9 @@ mutation through returned views, and verifies that live views reflect additions.
 
 Checks throw `AssertionError` on failure and do not depend on Java's optional
 `assert` flag. The PowerShell `check` command compiles all test sources into
-`build/test-classes`, runs each test entry point, and also checks console startup.
+`build/test-classes` and runs each test entry point. It also starts the real
+console application and checks both MST results, disconnected forest reporting,
+cycle detection, SCC count, a reconstructed route, and the unreachable airport.
 
 `DisjointSetUnionTest` contains 11 scenarios covering initial groups, empty and
 single-element inputs, successful and repeated unions, invalid indices, union

@@ -76,8 +76,24 @@ $output = & $java -cp $classesDirectory cityplanner.Main
 if ($LASTEXITCODE -ne 0) {
     throw 'Application startup failed.'
 }
-if (@($output).Count -ne 1 -or $output -ne 'Smart City Infrastructure and Route Planning') {
-    throw 'The startup smoke check returned unexpected output.'
+$requiredOutputLines = @(
+    'Smart City Infrastructure and Route Planning',
+    'Kruskal MST: weight=21, components=1, connected=true',
+    'Prim MST: weight=21, components=1, connected=true',
+    'Kruskal forest: weight=21, components=2, connected=false',
+    'Prim forest: weight=21, components=2, connected=false',
+    'No topological order: directed cycle detected.',
+    'SCC count: 3',
+    '  West: distance=7, path=Center -> East -> North -> South -> West',
+    '  Airport: unreachable'
+)
+foreach ($requiredLine in $requiredOutputLines) {
+    if (@($output) -cnotcontains $requiredLine) {
+        throw "The console smoke check is missing expected output: $requiredLine"
+    }
+}
+if (@($output | Where-Object { $_ -clike 'Topological order: *' }).Count -ne 1) {
+    throw 'The console smoke check must include one complete topological order.'
 }
 
 $testSourceFiles = @(Get-ChildItem -LiteralPath $testSourceDirectory -Recurse -Filter '*.java' |
@@ -106,5 +122,5 @@ foreach ($testEntryPoint in $testEntryPoints) {
 }
 
 Write-Output "Build passed with $compilerVersion (target: Java 17, warnings treated as errors)."
-Write-Output 'Startup smoke check passed.'
+Write-Output 'Console smoke check passed.'
 Write-Output "$($testEntryPoints.Count) test class(es) passed."
