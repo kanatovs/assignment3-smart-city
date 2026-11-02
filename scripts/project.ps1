@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('check', 'run', 'benchmark-mst')]
+    [ValidateSet('check', 'run', 'benchmark-mst', 'benchmark')]
     [string]$Task = 'check',
     [string]$ResultsDirectory
 )
@@ -80,6 +80,17 @@ if ($Task -eq 'benchmark-mst') {
     & $java -cp $classesDirectory cityplanner.experiments.MstExperiments $ResultsDirectory
     if ($LASTEXITCODE -ne 0) {
         throw 'MST experiments failed.'
+    }
+    exit 0
+}
+
+if ($Task -eq 'benchmark') {
+    if (-not $ResultsDirectory) {
+        $ResultsDirectory = Join-Path $projectRoot 'results/tables'
+    }
+    & $java -cp $classesDirectory cityplanner.experiments.GraphExperiments $ResultsDirectory
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Graph experiments failed.'
     }
     exit 0
 }
