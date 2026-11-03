@@ -1,0 +1,27 @@
+key,value
+algorithm_order,alternating_per_round
+available_processors,16
+captured_at_utc,2026-11-03T08:08:37.331929700Z
+connected_seeds,"41100,41101,41102"
+cyclic_seeds,"41300,41301,41302"
+dag_seeds,"41200,41201,41202"
+dijkstra_source,0
+directed_algorithm_order,"TopologicalSort,Kosaraju,Dijkstra"
+experiment_suite,all
+instrumentation_enabled,true
+java_vendor,Eclipse Adoptium
+java_version,17.0.17
+java_vm_name,OpenJDK 64-Bit Server VM
+java_vm_version,17.0.17+10
+max_heap_bytes,4196401152
+measured_runs,5
+os_arch,amd64
+os_name,Windows 11
+os_version,10.0
+scenarios,"connected-undirected,dag-directed,cyclic-directed"
+timer,System.nanoTime
+timing_scope,complete_algorithm_method
+undirected_algorithm_order,"Kruskal,Prim,Dijkstra"
+warmup_runs,3
+weight_max,100
+weight_min,0

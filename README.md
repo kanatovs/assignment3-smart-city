@@ -15,8 +15,8 @@ including disconnected, cyclic, and unreachable cases. A seeded connected
 undirected graph generator and separate DAG and cyclic directed generators
 are available for the required input sizes. A shared timing and CSV runner
 measures all five algorithms across connected undirected, DAG, and cyclic
-directed scenarios. The saved report currently contains the MST capture;
-complete result tables, plots, and final analysis are pending.
+directed scenarios. Complete result tables and reproducible plots are included;
+the final interpretation is being completed.
 
 ## Build and run
 
@@ -58,8 +58,8 @@ This command rebuilds production sources and writes `all-runs.csv`,
 `all-summary.csv`, and `all-environment.csv` under the repository's
 `results/tables/`, even when invoked from another working directory. It measures
 27 algorithm/input groups with five runs each: 135 raw intervals in total.
-Each group also receives three untimed warm-up calls. The complete capture for
-the report will be saved together with its plots.
+Each group also receives three untimed warm-up calls. The saved report uses the
+complete capture in `all-*.csv`; the focused MST files retain an earlier capture.
 
 To collect only the MST measurements:
 
@@ -79,6 +79,34 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\project.ps1 benchm
 ```
 
 Relative custom paths are resolved from the caller's working directory.
+
+Generate both plots from the saved complete capture:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\plot-results.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-plots.ps1
+```
+
+The plotting script requires only PowerShell 5.1 or newer and its standard
+libraries. It reads `all-runs.csv` and `all-summary.csv`, checks their coverage
+and arithmetic, and writes `results/plots/time-vs-vertices.svg` and
+`results/plots/time-vs-edges.svg`. It does not rerun Java or alter measurements.
+SVG output is deterministic for unchanged input. Custom locations are supported:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\plot-results.ps1 -ResultsDirectory '.\build\graph sample' -PlotsDirectory '.\build\graph plots'
+```
+
+Each plot has one panel per scenario. Points show five-run mean milliseconds;
+whiskers show the observed minimum and maximum, not confidence intervals.
+Straight connectors help follow the three measured sizes and do not represent
+additional samples. The horizontal axis is logarithmic; each panel uses its
+own linear vertical scale. Both V and E change between these inputs.
+
+`check-plots.ps1` verifies marker values and min-max ranges against the CSV,
+valid XML and encoding, byte-identical regeneration, rejection of malformed
+captures, and valid rendering coordinates for zero-duration samples. It uses
+temporary files under ignored `build/` and leaves the saved report unchanged.
 
 `-ExecutionPolicy Bypass` permits the local script in this PowerShell process
 only; it does not change the machine or user execution policy. It is needed on
@@ -184,9 +212,17 @@ Current project layout:
 |-- .gitignore
 |-- README.md
 |-- scripts/
-|   `-- project.ps1
+|   |-- check-plots.ps1
+|   |-- project.ps1
+|   `-- plot-results.ps1
 |-- results/
+|   |-- plots/
+|   |   |-- time-vs-edges.svg
+|   |   `-- time-vs-vertices.svg
 |   `-- tables/
+|       |-- all-environment.csv
+|       |-- all-runs.csv
+|       |-- all-summary.csv
 |       |-- mst-environment.csv
 |       |-- mst-runs.csv
 |       `-- mst-summary.csv
@@ -857,11 +893,17 @@ outside the timer. The source vertex and graph direction are recorded.
 
 ## Results
 
-The saved MST capture contains 30 measured rows and six summary groups:
+The complete capture contains 135 measured rows and 27 summary groups:
 
-- [Raw intervals, counters, seeds, and outcomes](results/tables/mst-runs.csv).
-- [Five-run averages in nanoseconds and milliseconds](results/tables/mst-summary.csv).
-- [Capture environment and measurement settings](results/tables/mst-environment.csv).
+- [Raw intervals, counters, seeds, and outcomes](results/tables/all-runs.csv).
+- [Five-run averages in nanoseconds and milliseconds](results/tables/all-summary.csv).
+- [Capture environment and measurement settings](results/tables/all-environment.csv).
+- [Execution time versus vertex count](results/plots/time-vs-vertices.svg).
+- [Execution time versus edge count](results/plots/time-vs-edges.svg).
+
+The plots read these saved CSV files. Their points show measured means and
+their whiskers preserve the range of the five raw intervals. No timings are
+hand-entered into the plotting script.
 
 | Vertices | Edges | Kruskal total weight | Prim total weight |
 | ---: | ---: | ---: | ---: |
@@ -869,12 +911,14 @@ The saved MST capture contains 30 measured rows and six summary groups:
 | 100 | 500 | 1075 | 1075 |
 | 1000 | 5000 | 11741 | 11741 |
 
-Every measured result is connected and contains `V - 1` selected edges.
+Every measured MST result is connected and contains `V - 1` selected edges.
 The raw file preserves all five intervals per algorithm/input; the summary
 contains their arithmetic means and separate counter means. Reproducing the
 command preserves graph-dependent results but produces new timings and capture
-metadata. The complete runner is implemented; a saved complete-suite capture,
-plots, and the full comparison are pending.
+metadata. The earlier focused MST capture remains available separately as
+[raw runs](results/tables/mst-runs.csv), [means](results/tables/mst-summary.csv),
+and [environment](results/tables/mst-environment.csv). It is a different timing
+session and is not used for the complete-suite plots.
 
 ## Comparison and Discussion
 
@@ -889,7 +933,7 @@ weights can produce different correct edge selections and orientations.
 | Disconnected input | DSU tracks all components | A tree starts at each unvisited component |
 | Main measured operations | Sorting comparisons, edge scans, DSU operations | Adjacency scans, queue offers/polls/comparisons |
 
-The MST capture is available for inspection. The final discussion
+The complete capture is available for inspection. The final discussion
 will explain DSU optimizations and examine SCC, topological ordering, and
 Dijkstra as the graphs grow. Since the required cases increase both V and E
 together, the two required plots will not independently isolate their effects.

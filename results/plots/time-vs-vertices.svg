@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1130" viewBox="0 0 1200 1130" role="img" aria-labelledby="title description">
+<title id="title">Execution time versus Vertices V</title>
+<desc id="description">Arithmetic means of five measured runs. Whiskers show the observed minimum and maximum, not a confidence interval. The horizontal axis is logarithmic; each scenario panel has its own linear millisecond scale. Points are connected by straight segments. Source data: all-summary.csv and all-runs.csv.</desc>
+<rect width="1200" height="1130" fill="#ffffff"/>
+<g font-family="Arial, sans-serif" fill="#172033">
+<text x="38" y="43" font-size="27" font-weight="bold">Execution time versus Vertices V</text>
+<text x="38" y="72" font-size="15">Mean of 5 measured runs; whiskers: min-max. Three warm-up runs are excluded.</text>
+<text x="38" y="96" font-size="14" fill="#4b5563">Logarithmic horizontal axis; independent linear time scales in the three panels.</text>
+<g data-scenario="connected-undirected">
+<text x="38" y="130" font-size="18" font-weight="bold">Connected undirected graph</text>
+<line x1="634" y1="124" x2="666" y2="124" stroke="#2563eb" stroke-width="2"/>
+<circle cx="650" cy="124" r="5" fill="#2563eb"/>
+<text x="673" y="129" font-size="13">Kruskal</text>
+<line x1="799" y1="124" x2="831" y2="124" stroke="#dc2626" stroke-width="2"/>
+<rect x="810" y="119" width="10" height="10" fill="#dc2626"/>
+<text x="838" y="129" font-size="13">Prim</text>
+<line x1="964" y1="124" x2="996" y2="124" stroke="#15803d" stroke-width="2"/>
+<polygon points="980,118 986,124 980,130 974,124" fill="#15803d"/>
+<text x="1003" y="129" font-size="13">Dijkstra</text>
+<line x1="130" y1="350" x2="1145" y2="350" stroke="#e5e7eb"/>
+<text x="117" y="355" text-anchor="end" font-size="13">0</text>
+<line x1="130" y1="286.667" x2="1145" y2="286.667" stroke="#e5e7eb"/>
+<text x="117" y="291.667" text-anchor="end" font-size="13">1</text>
+<line x1="130" y1="223.333" x2="1145" y2="223.333" stroke="#e5e7eb"/>
+<text x="117" y="228.333" text-anchor="end" font-size="13">2</text>
+<line x1="130" y1="160" x2="1145" y2="160" stroke="#e5e7eb"/>
+<text x="117" y="165" text-anchor="end" font-size="13">3</text>
+<line x1="130" y1="160" x2="130" y2="350" stroke="#e5e7eb"/>
+<text x="130" y="373" text-anchor="middle" font-size="13">10</text>
+<line x1="637.5" y1="160" x2="637.5" y2="350" stroke="#e5e7eb"/>
+<text x="637.5" y="373" text-anchor="middle" font-size="13">100</text>
+<line x1="1145" y1="160" x2="1145" y2="350" stroke="#e5e7eb"/>
+<text x="1145" y="373" text-anchor="middle" font-size="13">1000</text>
+<path d="M 130 160 V 350 H 1145" stroke="#6b7280" fill="none"/>
+<text x="38" y="255" transform="rotate(-90 38 255)" text-anchor="middle" font-size="14">Execution time (ms)</text>
+<text x="637.5" y="398" text-anchor="middle" font-size="14">Vertices V (logarithmic axis)</text>
+<polyline points="130,348.438 637.5,332.098 1145,219.732" stroke="#2563eb" stroke-width="2" fill="none"/>
+<g class="measurement" data-algorithm="Kruskal" data-vertices="10" data-edges="30" data-mean-ms="0.02466" data-min-ms="0.0168" data-max-ms="0.0306">
+<title>Kruskal: V=10, E=30; mean=0.02466 ms, min=0.0168 ms, max=0.0306 ms</title>
+<path d="M 130 348.062 V 348.936 M 126 348.062 H 134 M 126 348.936 H 134" fill="none" stroke="#2563eb" stroke-width="1.3" opacity="0.7"/>
+<circle cx="130" cy="348.438" r="5" fill="#2563eb"/>
+</g>
+<g class="measurement" data-algorithm="Kruskal" data-vertices="100" data-edges="500" data-mean-ms="0.28266" data-min-ms="0.248" data-max-ms="0.3171">
+<title>Kruskal: V=100, E=500; mean=0.28266 ms, min=0.248 ms, max=0.3171 ms</title>
+<path d="M 637.5 329.917 V 334.293 M 633.5 329.917 H 641.5 M 633.5 334.293 H 641.5" fill="none" stroke="#2563eb" stroke-width="1.3" opacity="0.7"/>
+<circle cx="637.5" cy="332.098" r="5" fill="#2563eb"/>
+</g>
+<g class="measurement" data-algorithm="Kruskal" data-vertices="1000" data-edges="5000" data-mean-ms="2.05686" data-min-ms="1.5593" data-max-ms="2.4267">
+<title>Kruskal: V=1000, E=5000; mean=2.05686 ms, min=1.5593 ms, max=2.4267 ms</title>
+<path d="M 1145 196.309 V 251.244 M 1141 196.309 H 1149 M 1141 251.244 H 1149" fill="none" stroke="#2563eb" stroke-width="1.3" opacity="0.7"/>
+<circle cx="1145" cy="219.732" r="5" fill="#2563eb"/>
+</g>
+<polyline points="130,347.028 637.5,339.224 1145,265.193" stroke="#dc2626" stroke-width="2" fill="none"/>
+<g class="measurement" data-algorithm="Prim" data-vertices="10" data-edges="30" data-mean-ms="0.04692" data-min-ms="0.0283" data-max-ms="0.0842">
+<title>Prim: V=10, E=30; mean=0.04692 ms, min=0.0283 ms, max=0.0842 ms</title>
+<path d="M 130 344.667 V 348.208 M 126 344.667 H 134 M 126 348.208 H 134" fill="none" stroke="#dc2626" stroke-width="1.3" opacity="0.7"/>
+<rect x="125" y="342.028" width="10" height="10" fill="#dc2626"/>
+</g>
+<g class="measurement" data-algorithm="Prim" data-vertices="100" data-edges="500" data-mean-ms="0.17014" data-min-ms="0.1212" data-max-ms="0.231">
+<title>Prim: V=100, E=500; mean=0.17014 ms, min=0.1212 ms, max=0.231 ms</title>
+<path d="M 637.5 335.37 V 342.324 M 633.5 335.37 H 641.5 M 633.5 342.324 H 641.5" fill="none" stroke="#dc2626" stroke-width="1.3" opacity="0.7"/>
+<rect x="632.5" y="334.224" width="10" height="10" fill="#dc2626"/>
+</g>
+<g class="measurement" data-algorithm="Prim" data-vertices="1000" data-edges="5000" data-mean-ms="1.33906" data-min-ms="1.0599" data-max-ms="1.4554">
+<title>Prim: V=1000, E=5000; mean=1.33906 ms, min=1.0599 ms, max=1.4554 ms</title>
+<path d="M 1145 257.825 V 282.873 M 1141 257.825 H 1149 M 1141 282.873 H 1149" fill="none" stroke="#dc2626" stroke-width="1.3" opacity="0.7"/>
+<rect x="1140" y="260.193" width="10" height="10" fill="#dc2626"/>
+</g>
+<polyline points="130,346.984 637.5,340.442 1145,309.773" stroke="#15803d" stroke-width="2" fill="none"/>
+<g class="measurement" data-algorithm="Dijkstra" data-vertices="10" data-edges="30" data-mean-ms="0.04762" data-min-ms="0.029" data-max-ms="0.0948">
+<title>Dijkstra: V=10, E=30; mean=0.04762 ms, min=0.029 ms, max=0.0948 ms</title>
+<path d="M 130 343.996 V 348.163 M 126 343.996 H 134 M 126 348.163 H 134" fill="none" stroke="#15803d" stroke-width="1.3" opacity="0.7"/>
+<polygon points="130,340.984 136,346.984 130,352.984 124,346.984" fill="#15803d"/>
+</g>
+<g class="measurement" data-algorithm="Dijkstra" data-vertices="100" data-edges="500" data-mean-ms="0.15092" data-min-ms="0.113" data-max-ms="0.1975">
+<title>Dijkstra: V=100, E=500; mean=0.15092 ms, min=0.113 ms, max=0.1975 ms</title>
+<path d="M 637.5 337.492 V 342.843 M 633.5 337.492 H 641.5 M 633.5 342.843 H 641.5" fill="none" stroke="#15803d" stroke-width="1.3" opacity="0.7"/>
+<polygon points="637.5,334.442 643.5,340.442 637.5,346.442 631.5,340.442" fill="#15803d"/>
+</g>
+<g class="measurement" data-algorithm="Dijkstra" data-vertices="1000" data-edges="5000" data-mean-ms="0.63516" data-min-ms="0.5275" data-max-ms="0.7799">
+<title>Dijkstra: V=1000, E=5000; mean=0.63516 ms, min=0.5275 ms, max=0.7799 ms</title>
+<path d="M 1145 300.606 V 316.592 M 1141 300.606 H 1149 M 1141 316.592 H 1149" fill="none" stroke="#15803d" stroke-width="1.3" opacity="0.7"/>
+<polygon points="1145,303.773 1151,309.773 1145,315.773 1139,309.773" fill="#15803d"/>
+</g>
+</g>
+<g data-scenario="dag-directed">
+<text x="38" y="450" font-size="18" font-weight="bold">Directed acyclic graph (DAG)</text>
+<line x1="634" y1="444" x2="666" y2="444" stroke="#9333ea" stroke-width="2"/>
+<polygon points="650,438 656,449 644,449" fill="#9333ea"/>
+<text x="673" y="449" font-size="13">TopologicalSort</text>
+<line x1="799" y1="444" x2="831" y2="444" stroke="#c2410c" stroke-width="2"/>
+<path d="M 810 444 H 820 M 815 439 V 449" stroke="#c2410c" stroke-width="3"/>
+<text x="838" y="449" font-size="13">Kosaraju</text>
+<line x1="964" y1="444" x2="996" y2="444" stroke="#15803d" stroke-width="2"/>
+<polygon points="980,438 986,444 980,450 974,444" fill="#15803d"/>
+<text x="1003" y="449" font-size="13">Dijkstra</text>
+<line x1="130" y1="670" x2="1145" y2="670" stroke="#e5e7eb"/>
+<text x="117" y="675" text-anchor="end" font-size="13">0</text>
+<line x1="130" y1="622.5" x2="1145" y2="622.5" stroke="#e5e7eb"/>
+<text x="117" y="627.5" text-anchor="end" font-size="13">0.5</text>
+<line x1="130" y1="575" x2="1145" y2="575" stroke="#e5e7eb"/>
+<text x="117" y="580" text-anchor="end" font-size="13">1</text>
+<line x1="130" y1="527.5" x2="1145" y2="527.5" stroke="#e5e7eb"/>
+<text x="117" y="532.5" text-anchor="end" font-size="13">1.5</text>
+<line x1="130" y1="480" x2="1145" y2="480" stroke="#e5e7eb"/>
+<text x="117" y="485" text-anchor="end" font-size="13">2</text>
+<line x1="130" y1="480" x2="130" y2="670" stroke="#e5e7eb"/>
+<text x="130" y="693" text-anchor="middle" font-size="13">10</text>
+<line x1="637.5" y1="480" x2="637.5" y2="670" stroke="#e5e7eb"/>
+<text x="637.5" y="693" text-anchor="middle" font-size="13">100</text>
+<line x1="1145" y1="480" x2="1145" y2="670" stroke="#e5e7eb"/>
+<text x="1145" y="693" text-anchor="middle" font-size="13">1000</text>
+<path d="M 130 480 V 670 H 1145" stroke="#6b7280" fill="none"/>
+<text x="38" y="575" transform="rotate(-90 38 575)" text-anchor="middle" font-size="14">Execution time (ms)</text>
+<text x="637.5" y="718" text-anchor="middle" font-size="14">Vertices V (logarithmic axis)</text>
+<polyline points="130,666.006 637.5,663.874 1145,636.482" stroke="#9333ea" stroke-width="2" fill="none"/>
+<g class="measurement" data-algorithm="TopologicalSort" data-vertices="10" data-edges="30" data-mean-ms="0.04204" data-min-ms="0.0179" data-max-ms="0.1302">
+<title>TopologicalSort: V=10, E=30; mean=0.04204 ms, min=0.0179 ms, max=0.1302 ms</title>
+<path d="M 130 657.631 V 668.3 M 126 657.631 H 134 M 126 668.3 H 134" fill="none" stroke="#9333ea" stroke-width="1.3" opacity="0.7"/>
+<polygon points="130,660.006 136,671.006 124,671.006" fill="#9333ea"/>
+</g>
+<g class="measurement" data-algorithm="TopologicalSort" data-vertices="100" data-edges="500" data-mean-ms="0.06448" data-min-ms="0.0528" data-max-ms="0.0877">
+<title>TopologicalSort: V=100, E=500; mean=0.06448 ms, min=0.0528 ms, max=0.0877 ms</title>
+<path d="M 637.5 661.669 V 664.984 M 633.5 661.669 H 641.5 M 633.5 664.984 H 641.5" fill="none" stroke="#9333ea" stroke-width="1.3" opacity="0.7"/>
+<polygon points="637.5,657.874 643.5,668.874 631.5,668.874" fill="#9333ea"/>
+</g>
+<g class="measurement" data-algorithm="TopologicalSort" data-vertices="1000" data-edges="5000" data-mean-ms="0.35282" data-min-ms="0.2351" data-max-ms="0.5123">
+<title>TopologicalSort: V=1000, E=5000; mean=0.35282 ms, min=0.2351 ms, max=0.5123 ms</title>
+<path d="M 1145 621.332 V 647.666 M 1141 621.332 H 1149 M 1141 647.666 H 1149" fill="none" stroke="#9333ea" stroke-width="1.3" opacity="0.7"/>
+<polygon points="1145,630.482 1151,641.482 1139,641.482" fill="#9333ea"/>
+</g>
+<polyline points="130,664.03 637.5,646.957 1145,555.531" stroke="#c2410c" stroke-width="2" fill="none"/>
+<g class="measurement" data-algorithm="Kosaraju" data-vertices="10" data-edges="30" data-mean-ms="0.06284" data-min-ms="0.0555" data-max-ms="0.0725">
+<title>Kosaraju: V=10, E=30; mean=0.06284 ms, min=0.0555 ms, max=0.0725 ms</title>
+<path d="M 130 663.113 V 664.728 M 126 663.113 H 134 M 126 664.728 H 134" fill="none" stroke="#c2410c" stroke-width="1.3" opacity="0.7"/>
+<path d="M 125 664.03 H 135 M 130 659.03 V 669.03" stroke="#c2410c" stroke-width="3"/>
+</g>
+<g class="measurement" data-algorithm="Kosaraju" data-vertices="100" data-edges="500" data-mean-ms="0.24256" data-min-ms="0.1873" data-max-ms="0.287">
+<title>Kosaraju: V=100, E=500; mean=0.24256 ms, min=0.1873 ms, max=0.287 ms</title>
+<path d="M 637.5 642.735 V 652.207 M 633.5 642.735 H 641.5 M 633.5 652.207 H 641.5" fill="none" stroke="#c2410c" stroke-width="1.3" opacity="0.7"/>
+<path d="M 632.5 646.957 H 642.5 M 637.5 641.957 V 651.957" stroke="#c2410c" stroke-width="3"/>
+</g>
+<g class="measurement" data-algorithm="Kosaraju" data-vertices="1000" data-edges="5000" data-mean-ms="1.20494" data-min-ms="0.8182" data-max-ms="1.7627">
+<title>Kosaraju: V=1000, E=5000; mean=1.20494 ms, min=0.8182 ms, max=1.7627 ms</title>
+<path d="M 1145 502.544 V 592.271 M 1141 502.544 H 1149 M 1141 592.271 H 1149" fill="none" stroke="#c2410c" stroke-width="1.3" opacity="0.7"/>
+<path d="M 1140 555.531 H 1150 M 1145 550.531 V 560.531" stroke="#c2410c" stroke-width="3"/>
+</g>
+<polyline points="130,668.461 637.5,667.412 1145,663.711" stroke="#15803d" stroke-width="2" fill="none"/>
+<g class="measurement" data-algorithm="Dijkstra" data-vertices="10" data-edges="30" data-mean-ms="0.0162" data-min-ms="0.0098" data-max-ms="0.0229">
+<title>Dijkstra: V=10, E=30; mean=0.0162 ms, min=0.0098 ms, max=0.0229 ms</title>
+<path d="M 130 667.825 V 669.069 M 126 667.825 H 134 M 126 669.069 H 134" fill="none" stroke="#15803d" stroke-width="1.3" opacity="0.7"/>
+<polygon points="130,662.461 136,668.461 130,674.461 124,668.461" fill="#15803d"/>
+</g>
+<g class="measurement" data-algorithm="Dijkstra" data-vertices="100" data-edges="500" data-mean-ms="0.02724" data-min-ms="0.0158" data-max-ms="0.0492">
+<title>Dijkstra: V=100, E=500; mean=0.02724 ms, min=0.0158 ms, max=0.0492 ms</title>
+<path d="M 637.5 665.326 V 668.499 M 633.5 665.326 H 641.5 M 633.5 668.499 H 641.5" fill="none" stroke="#15803d" stroke-width="1.3" opacity="0.7"/>
+<polygon points="637.5,661.412 643.5,667.412 637.5,673.412 631.5,667.412" fill="#15803d"/>
+</g>
+<g class="measurement" data-algorithm="Dijkstra" data-vertices="1000" data-edges="5000" data-mean-ms="0.0662" data-min-ms="0.0428" data-max-ms="0.0852">
+<title>Dijkstra: V=1000, E=5000; mean=0.0662 ms, min=0.0428 ms, max=0.0852 ms</title>
+<path d="M 1145 661.906 V 665.934 M 1141 661.906 H 1149 M 1141 665.934 H 1149" fill="none" stroke="#15803d" stroke-width="1.3" opacity="0.7"/>
+<polygon points="1145,657.711 1151,663.711 1145,669.711 1139,663.711" fill="#15803d"/>
+</g>
+</g>
+<g data-scenario="cyclic-directed">
+<text x="38" y="770" font-size="18" font-weight="bold">Directed graph with a cycle</text>
+<line x1="634" y1="764" x2="666" y2="764" stroke="#9333ea" stroke-width="2"/>
+<polygon points="650,758 656,769 644,769" fill="#9333ea"/>
+<text x="673" y="769" font-size="13">TopologicalSort</text>
+<line x1="799" y1="764" x2="831" y2="764" stroke="#c2410c" stroke-width="2"/>
+<path d="M 810 764 H 820 M 815 759 V 769" stroke="#c2410c" stroke-width="3"/>
+<text x="838" y="769" font-size="13">Kosaraju</text>
+<line x1="964" y1="764" x2="996" y2="764" stroke="#15803d" stroke-width="2"/>
+<polygon points="980,758 986,764 980,770 974,764" fill="#15803d"/>
+<text x="1003" y="769" font-size="13">Dijkstra</text>
+<line x1="130" y1="990" x2="1145" y2="990" stroke="#e5e7eb"/>
+<text x="117" y="995" text-anchor="end" font-size="13">0</text>
+<line x1="130" y1="942.5" x2="1145" y2="942.5" stroke="#e5e7eb"/>
+<text x="117" y="947.5" text-anchor="end" font-size="13">0.25</text>
+<line x1="130" y1="895" x2="1145" y2="895" stroke="#e5e7eb"/>
+<text x="117" y="900" text-anchor="end" font-size="13">0.5</text>
+<line x1="130" y1="847.5" x2="1145" y2="847.5" stroke="#e5e7eb"/>
+<text x="117" y="852.5" text-anchor="end" font-size="13">0.75</text>
+<line x1="130" y1="800" x2="1145" y2="800" stroke="#e5e7eb"/>
+<text x="117" y="805" text-anchor="end" font-size="13">1</text>
+<line x1="130" y1="800" x2="130" y2="990" stroke="#e5e7eb"/>
+<text x="130" y="1013" text-anchor="middle" font-size="13">10</text>
+<line x1="637.5" y1="800" x2="637.5" y2="990" stroke="#e5e7eb"/>
+<text x="637.5" y="1013" text-anchor="middle" font-size="13">100</text>
+<line x1="1145" y1="800" x2="1145" y2="990" stroke="#e5e7eb"/>
+<text x="1145" y="1013" text-anchor="middle" font-size="13">1000</text>
+<path d="M 130 800 V 990 H 1145" stroke="#6b7280" fill="none"/>
+<text x="38" y="895" transform="rotate(-90 38 895)" text-anchor="middle" font-size="14">Execution time (ms)</text>
+<text x="637.5" y="1038" text-anchor="middle" font-size="14">Vertices V (logarithmic axis)</text>
+<polyline points="130,988.507 637.5,985.911 1145,974.929" stroke="#9333ea" stroke-width="2" fill="none"/>
+<g class="measurement" data-algorithm="TopologicalSort" data-vertices="10" data-edges="30" data-mean-ms="0.00786" data-min-ms="0.0046" data-max-ms="0.0098">
+<title>TopologicalSort: V=10, E=30; mean=0.00786 ms, min=0.0046 ms, max=0.0098 ms</title>
+<path d="M 130 988.138 V 989.126 M 126 988.138 H 134 M 126 989.126 H 134" fill="none" stroke="#9333ea" stroke-width="1.3" opacity="0.7"/>
+<polygon points="130,982.507 136,993.507 124,993.507" fill="#9333ea"/>
+</g>
+<g class="measurement" data-algorithm="TopologicalSort" data-vertices="100" data-edges="500" data-mean-ms="0.02152" data-min-ms="0.0167" data-max-ms="0.0299">
+<title>TopologicalSort: V=100, E=500; mean=0.02152 ms, min=0.0167 ms, max=0.0299 ms</title>
+<path d="M 637.5 984.319 V 986.827 M 633.5 984.319 H 641.5 M 633.5 986.827 H 641.5" fill="none" stroke="#9333ea" stroke-width="1.3" opacity="0.7"/>
+<polygon points="637.5,979.911 643.5,990.911 631.5,990.911" fill="#9333ea"/>
+</g>
+<g class="measurement" data-algorithm="TopologicalSort" data-vertices="1000" data-edges="5000" data-mean-ms="0.07932" data-min-ms="0.0689" data-max-ms="0.0995">
+<title>TopologicalSort: V=1000, E=5000; mean=0.07932 ms, min=0.0689 ms, max=0.0995 ms</title>
+<path d="M 1145 971.095 V 976.909 M 1141 971.095 H 1149 M 1141 976.909 H 1149" fill="none" stroke="#9333ea" stroke-width="1.3" opacity="0.7"/>
+<polygon points="1145,968.929 1151,979.929 1139,979.929" fill="#9333ea"/>
+</g>
+<polyline points="130,982.434 637.5,948.287 1145,842.67" stroke="#c2410c" stroke-width="2" fill="none"/>
+<g class="measurement" data-algorithm="Kosaraju" data-vertices="10" data-edges="30" data-mean-ms="0.03982" data-min-ms="0.034" data-max-ms="0.0529">
+<title>Kosaraju: V=10, E=30; mean=0.03982 ms, min=0.034 ms, max=0.0529 ms</title>
+<path d="M 130 979.949 V 983.54 M 126 979.949 H 134 M 126 983.54 H 134" fill="none" stroke="#c2410c" stroke-width="1.3" opacity="0.7"/>
+<path d="M 125 982.434 H 135 M 130 977.434 V 987.434" stroke="#c2410c" stroke-width="3"/>
+</g>
+<g class="measurement" data-algorithm="Kosaraju" data-vertices="100" data-edges="500" data-mean-ms="0.21954" data-min-ms="0.159" data-max-ms="0.2699">
+<title>Kosaraju: V=100, E=500; mean=0.21954 ms, min=0.159 ms, max=0.2699 ms</title>
+<path d="M 637.5 938.719 V 959.79 M 633.5 938.719 H 641.5 M 633.5 959.79 H 641.5" fill="none" stroke="#c2410c" stroke-width="1.3" opacity="0.7"/>
+<path d="M 632.5 948.287 H 642.5 M 637.5 943.287 V 953.287" stroke="#c2410c" stroke-width="3"/>
+</g>
+<g class="measurement" data-algorithm="Kosaraju" data-vertices="1000" data-edges="5000" data-mean-ms="0.77542" data-min-ms="0.6863" data-max-ms="0.867">
+<title>Kosaraju: V=1000, E=5000; mean=0.77542 ms, min=0.6863 ms, max=0.867 ms</title>
+<path d="M 1145 825.27 V 859.603 M 1141 825.27 H 1149 M 1141 859.603 H 1149" fill="none" stroke="#c2410c" stroke-width="1.3" opacity="0.7"/>
+<path d="M 1140 842.67 H 1150 M 1145 837.67 V 847.67" stroke="#c2410c" stroke-width="3"/>
+</g>
+<polyline points="130,987.085 637.5,955.416 1145,884.501" stroke="#15803d" stroke-width="2" fill="none"/>
+<g class="measurement" data-algorithm="Dijkstra" data-vertices="10" data-edges="30" data-mean-ms="0.01534" data-min-ms="0.0124" data-max-ms="0.0184">
+<title>Dijkstra: V=10, E=30; mean=0.01534 ms, min=0.0124 ms, max=0.0184 ms</title>
+<path d="M 130 986.504 V 987.644 M 126 986.504 H 134 M 126 987.644 H 134" fill="none" stroke="#15803d" stroke-width="1.3" opacity="0.7"/>
+<polygon points="130,981.085 136,987.085 130,993.085 124,987.085" fill="#15803d"/>
+</g>
+<g class="measurement" data-algorithm="Dijkstra" data-vertices="100" data-edges="500" data-mean-ms="0.18202" data-min-ms="0.0782" data-max-ms="0.5397">
+<title>Dijkstra: V=100, E=500; mean=0.18202 ms, min=0.0782 ms, max=0.5397 ms</title>
+<path d="M 637.5 887.457 V 975.142 M 633.5 887.457 H 641.5 M 633.5 975.142 H 641.5" fill="none" stroke="#15803d" stroke-width="1.3" opacity="0.7"/>
+<polygon points="637.5,949.416 643.5,955.416 637.5,961.416 631.5,955.416" fill="#15803d"/>
+</g>
+<g class="measurement" data-algorithm="Dijkstra" data-vertices="1000" data-edges="5000" data-mean-ms="0.55526" data-min-ms="0.4567" data-max-ms="0.6093">
+<title>Dijkstra: V=1000, E=5000; mean=0.55526 ms, min=0.4567 ms, max=0.6093 ms</title>
+<path d="M 1145 874.233 V 903.227 M 1141 874.233 H 1149 M 1141 903.227 H 1149" fill="none" stroke="#15803d" stroke-width="1.3" opacity="0.7"/>
+<polygon points="1145,878.501 1151,884.501 1145,890.501 1139,884.501" fill="#15803d"/>
+</g>
+</g>
+<text x="38" y="1082" font-size="14" fill="#4b5563">V and E increase together in these inputs; the two plots do not isolate their individual effects.</text>
+<text x="38" y="1106" font-size="13" fill="#4b5563">Whiskers describe five observations, not uncertainty bounds. Times include operation counters.</text>
+</g></svg>
